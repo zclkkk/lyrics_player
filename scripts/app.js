@@ -19,6 +19,8 @@
     fontScaleLabel: "歌词字号",
     coverScaleLabel: "封面尺寸",
     bgDarknessLabel: "背景深浅",
+    bgBlurLabel: "模糊强度",
+    bgAnimateLabel: "动态背景呼吸效果",
     playPause: "播放 / 暂停",
     recalcColor: "重新取色",
     workflowHint:
@@ -113,6 +115,10 @@
     coverScaleLabel: $("coverScaleLabel"),
     bgDarknessInput: $("bgDarknessInput"),
     bgDarknessLabel: $("bgDarknessLabel"),
+    bgBlurInput: $("bgBlurInput"),
+    bgBlurLabel: $("bgBlurLabel"),
+    bgAnimateInput: $("bgAnimateInput"),
+    bgAnimateLabel: $("bgAnimateLabel"),
     workflowHint: $("workflowHint"),
     sublinePrimary: $("sublinePrimary"),
     sublineSecondary: $("sublineSecondary"),
@@ -139,6 +145,8 @@
     elements.fontScaleLabel.textContent = TEXT.fontScaleLabel;
     elements.coverScaleLabel.textContent = TEXT.coverScaleLabel;
     elements.bgDarknessLabel.textContent = TEXT.bgDarknessLabel;
+    elements.bgBlurLabel.textContent = TEXT.bgBlurLabel;
+    elements.bgAnimateLabel.textContent = TEXT.bgAnimateLabel;
     elements.playBtn.textContent = TEXT.playPause;
     elements.recalcColorBtn.textContent = TEXT.recalcColor;
     elements.workflowHint.textContent = TEXT.workflowHint;
@@ -509,6 +517,18 @@
     document.documentElement.style.setProperty("--bg-darkness", String(value));
   };
 
+  const handleBgBlur = (event) => {
+    const value = Number(event.target.value);
+    document.documentElement.style.setProperty("--bg-blur", `${value}px`);
+  };
+
+  const handleBgAnimate = (event) => {
+    const bgElement = document.querySelector(".bg");
+    if (bgElement) {
+      bgElement.classList.toggle("animate", event.target.checked);
+    }
+  };
+
   const togglePlayback = async () => {
     if (!elements.audio.src) {
       return;
@@ -535,6 +555,8 @@
     elements.fontScaleInput.addEventListener("input", handleFontScale);
     elements.coverScaleInput.addEventListener("input", handleCoverScale);
     elements.bgDarknessInput.addEventListener("input", handleBgDarkness);
+    elements.bgBlurInput.addEventListener("input", handleBgBlur);
+    elements.bgAnimateInput.addEventListener("change", handleBgAnimate);
 
     elements.playBtn.addEventListener("click", togglePlayback);
     elements.recalcColorBtn.addEventListener("click", recalcCoverColor);
@@ -602,6 +624,7 @@
     handleFontScale({ target: elements.fontScaleInput });
     handleCoverScale({ target: elements.coverScaleInput });
     handleBgDarkness({ target: elements.bgDarknessInput });
+    handleBgBlur({ target: elements.bgBlurInput });
     renderLyrics();
     loadDemo();
     updateProgress();
