@@ -226,20 +226,27 @@ select {
 
 .empty-state {
   display: none;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  place-items: center;
-  padding: 32px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(12, 12, 16, 0.38);
+  backdrop-filter: blur(18px);
   color: rgba(255, 255, 255, 0.45);
-  text-align: center;
-  font-size: 18px;
-  line-height: 1.7;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .empty-state.show {
-  display: grid;
+  display: block;
 }
+
+.empty-state span {
+  display: block;
+}
+
+.empty-state span + span { margin-top: 4px; }
 
 .lyrics-focus-line {
   position: absolute;
@@ -596,4 +603,5 @@ select {
     top: 12px;
     left: 12px;
   }
+
 }

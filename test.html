@@ -79,6 +79,11 @@
           建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。
         </div>
       </div>
+
+      <div class="empty-state show" id="emptyState">
+        <span id="emptyStateLine1">导入音频与 LRC 后开始播放。</span><br />
+        <span id="emptyStateLine2">如果只想做静态镜头，也可以只导入封面和歌词。</span>
+      </div>
     </aside>
 
     <main class="shell">
@@ -101,10 +106,6 @@
       </section>
 
       <section class="right">
-        <div class="empty-state show" id="emptyState">
-          <span id="emptyStateLine1">导入音频与 LRC 后开始播放。</span><br />
-          <span id="emptyStateLine2">如果只想做静态镜头，也可以只导入封面和歌词。</span>
-        </div>
         <div class="lyrics-focus-line"></div>
         <div class="lyrics-track" id="lyricsTrack"></div>
       </section>
