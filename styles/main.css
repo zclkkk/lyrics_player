@@ -12,6 +12,7 @@
   --lyrics-scale: 1;
   --focus-line-height: clamp(72px, calc(84px * var(--lyrics-scale)), 144px);
   --safe-bottom: max(24px, env(safe-area-inset-bottom));
+  --bg-darkness: 0.72;
 }
 
 * {
@@ -65,21 +66,19 @@ select {
   background-image: var(--bg-image);
   background-size: cover;
   background-position: center;
-  transform: scale(1.18);
-  filter: blur(58px) saturate(1.18) brightness(0.55);
-  opacity: 0.72;
+  transform: scale(1.2);
+  filter: blur(80px) saturate(1.2) brightness(calc(0.5 + var(--bg-darkness) * 0.2));
+  opacity: var(--bg-darkness);
 }
 
 .bg::before {
   z-index: -2;
-  background:
-    linear-gradient(90deg, rgba(10, 10, 12, 0.72), rgba(10, 10, 12, 0.18) 36%, rgba(10, 10, 12, 0.32) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.36), transparent 22%, transparent 76%, rgba(0, 0, 0, 0.44));
+  background: linear-gradient(180deg, rgba(10, 10, 12, calc(0.4 + var(--bg-darkness) * 0.3)), rgba(10, 10, 12, calc(0.1 + var(--bg-darkness) * 0.1)));
 }
 
 .bg::after {
   z-index: -1;
-  background: radial-gradient(circle at center, transparent, rgba(0, 0, 0, 0.22) 52%, rgba(0, 0, 0, 0.46));
+  background: radial-gradient(circle at center, transparent, rgba(0, 0, 0, calc(0.1 + var(--bg-darkness) * 0.15)) 60%, rgba(0, 0, 0, calc(0.3 + var(--bg-darkness) * 0.2)));
 }
 
 .grain {

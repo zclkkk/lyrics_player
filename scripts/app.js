@@ -18,6 +18,7 @@
     lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
     fontScaleLabel: "歌词字号",
     coverScaleLabel: "封面尺寸",
+    bgDarknessLabel: "背景深浅",
     playPause: "播放 / 暂停",
     recalcColor: "重新取色",
     workflowHint:
@@ -110,6 +111,8 @@
     lrcLabel: $("lrcLabel"),
     fontScaleLabel: $("fontScaleLabel"),
     coverScaleLabel: $("coverScaleLabel"),
+    bgDarknessInput: $("bgDarknessInput"),
+    bgDarknessLabel: $("bgDarknessLabel"),
     workflowHint: $("workflowHint"),
     sublinePrimary: $("sublinePrimary"),
     sublineSecondary: $("sublineSecondary"),
@@ -135,6 +138,7 @@
     elements.lrcInput.placeholder = TEXT.lrcPlaceholder;
     elements.fontScaleLabel.textContent = TEXT.fontScaleLabel;
     elements.coverScaleLabel.textContent = TEXT.coverScaleLabel;
+    elements.bgDarknessLabel.textContent = TEXT.bgDarknessLabel;
     elements.playBtn.textContent = TEXT.playPause;
     elements.recalcColorBtn.textContent = TEXT.recalcColor;
     elements.workflowHint.textContent = TEXT.workflowHint;
@@ -500,6 +504,11 @@
     document.documentElement.style.setProperty("--cover-size", `${coverSize}px`);
   };
 
+  const handleBgDarkness = (event) => {
+    const value = Number(event.target.value) / 100;
+    document.documentElement.style.setProperty("--bg-darkness", String(value));
+  };
+
   const togglePlayback = async () => {
     if (!elements.audio.src) {
       return;
@@ -525,6 +534,7 @@
     elements.audioInput.addEventListener("change", handleAudioUpload);
     elements.fontScaleInput.addEventListener("input", handleFontScale);
     elements.coverScaleInput.addEventListener("input", handleCoverScale);
+    elements.bgDarknessInput.addEventListener("input", handleBgDarkness);
 
     elements.playBtn.addEventListener("click", togglePlayback);
     elements.recalcColorBtn.addEventListener("click", recalcCoverColor);
@@ -591,6 +601,7 @@
     bindEvents();
     handleFontScale({ target: elements.fontScaleInput });
     handleCoverScale({ target: elements.coverScaleInput });
+    handleBgDarkness({ target: elements.bgDarknessInput });
     renderLyrics();
     loadDemo();
     updateProgress();
