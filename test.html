@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lyrics Recording Page</title>
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+  <div class="app" id="app">
+    <div class="bg"></div>
+    <div class="grain"></div>
+
+    <div class="floating-tools">
+      <button class="mini-btn" id="togglePanelBtn" type="button">Panel</button>
+      <button class="mini-btn" id="toggleRecordingBtn" type="button">Recording</button>
+      <div class="badge" id="shortcutsBadge">Space Play / Pause | R Recording | H Hide Panel</div>
+    </div>
+
+    <aside class="controls-panel" id="panel">
+      <div class="panel-head">
+        <div class="panel-title" id="panelTitle">Recording Console</div>
+        <div class="panel-actions">
+          <button class="mini-btn" id="loadDemoBtn" type="button">Load Demo</button>
+          <button class="mini-btn" id="resetViewBtn" type="button">Reset View</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="row2">
+          <div class="field">
+            <label for="titleInput" id="songTitleLabel">Song Title</label>
+            <input type="text" id="titleInput" value="Your Cover Track" />
+          </div>
+          <div class="field">
+            <label for="artistInput" id="artistLabel">Artist / Credit</label>
+            <input type="text" id="artistInput" value="Your Name / Original Artist" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="coverInput" id="coverLabel">Cover</label>
+            <label class="file-label" for="coverInput" id="coverPickerLabel">Choose Cover Image</label>
+            <input class="hidden-input" id="coverInput" type="file" accept="image/*" />
+          </div>
+          <div class="field">
+            <label for="audioInput" id="audioLabel">Audio</label>
+            <label class="file-label" for="audioInput" id="audioPickerLabel">Choose Audio File</label>
+            <input class="hidden-input" id="audioInput" type="file" accept="audio/*" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="lrcInput" id="lrcLabel">LRC Lyrics</label>
+          <textarea
+            id="lrcInput"
+            placeholder="Paste .lrc content, for example:&#10;[00:00.00]Your cover title&#10;[00:12.30]First lyric line"
+          ></textarea>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="fontScaleInput" id="fontScaleLabel">Lyrics Size</label>
+            <input type="range" id="fontScaleInput" min="80" max="140" value="100" />
+          </div>
+          <div class="field">
+            <label for="coverScaleInput" id="coverScaleLabel">Cover Size</label>
+            <input type="range" id="coverScaleInput" min="26" max="42" value="35" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <button class="btn primary" id="playBtn" type="button">Play / Pause</button>
+          <button class="btn" id="recalcColorBtn" type="button">Recalculate Colors</button>
+        </div>
+
+        <div class="hint" id="workflowHint">
+          Import cover art, audio and LRC, then switch to recording mode after playback starts. You can capture the page with OBS or any screen recorder.
+        </div>
+      </div>
+    </aside>
+
+    <main class="shell">
+      <section class="left">
+        <div class="cover-wrap">
+          <div class="cover-glow"></div>
+          <img class="cover" id="cover" alt="Song Cover" />
+        </div>
+
+        <div class="meta">
+          <div class="eyebrow">Now Playing</div>
+          <h1 class="title" id="title">Your Cover Track</h1>
+          <div class="artist" id="artist">Your Name / Original Artist</div>
+          <div class="subline">
+            <span id="sublinePrimary">Cover Submission Visualizer</span>
+            <span class="dot"></span>
+            <span id="sublineSecondary">Blurred Background | Auto Colors | Synced Lyrics</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="empty-state show" id="emptyState">
+          <span id="emptyStateLine1">Import audio and LRC to start playback.</span><br />
+          <span id="emptyStateLine2">You can also preview a static scene with only cover art and lyrics.</span>
+        </div>
+        <div class="lyrics-focus-line"></div>
+        <div class="lyrics-track" id="lyricsTrack"></div>
+      </section>
+    </main>
+
+    <div class="bottom">
+      <div class="time" id="currentTime">00:00</div>
+      <div class="progress" id="progress"></div>
+      <div class="time" id="duration">00:00</div>
+    </div>
+
+    <audio id="audio"></audio>
+  </div>
+
+  <script src="./scripts/app.js" defer></script>
+</body>
+</html>
