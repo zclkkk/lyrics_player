@@ -203,7 +203,7 @@
         const minutes = Number(match[1] || 0);
         const seconds = Number(match[2] || 0);
         const fractionText = match[3] || "0";
-        const fraction = fractionText.length === 3 ? Number(fractionText) / 1000 : Number(fractionText) / 100;
+        const fraction = Number(fractionText.padEnd(3, '0')) / 1000;
 
         lines.push({
           time: minutes * 60 + seconds + fraction,
