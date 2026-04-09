@@ -5,7 +5,7 @@
   --text-soft: rgba(255, 255, 255, 0.72);
   --text-faint: rgba(255, 255, 255, 0.36);
   --shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
-  --cover-size: min(35vw, 440px);
+  --cover-size: 380px;
   --cover-radius: 24px;
   --progress: 0%;
   --lyrics-offset: 0px;
@@ -117,7 +117,7 @@ select {
 
 .cover-wrap {
   position: relative;
-  width: var(--cover-size);
+  width: min(var(--cover-size), 100%);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   margin-bottom: 30px;
@@ -547,7 +547,7 @@ select {
   }
 
   .cover-wrap {
-    width: min(34vw, 240px);
+    width: min(var(--cover-size), 34vw, 240px);
     margin-bottom: 0;
     flex: 0 0 auto;
   }
@@ -577,7 +577,7 @@ select {
   }
 
   .cover-wrap {
-    width: min(72vw, 260px);
+    width: min(var(--cover-size), 72vw, 260px);
   }
 
   .bottom {

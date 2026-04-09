@@ -481,7 +481,15 @@
   };
 
   const handleCoverScale = (event) => {
-    document.documentElement.style.setProperty("--cover-size", `min(${Number(event.target.value)}vw, 440px)`);
+    const minSlider = 26;
+    const maxSlider = 42;
+    const minCoverSize = 280;
+    const maxCoverSize = 440;
+    const sliderValue = Number(event.target.value);
+    const ratio = (sliderValue - minSlider) / (maxSlider - minSlider);
+    const coverSize = Math.round(minCoverSize + (maxCoverSize - minCoverSize) * ratio);
+
+    document.documentElement.style.setProperty("--cover-size", `${coverSize}px`);
   };
 
   const togglePlayback = async () => {
