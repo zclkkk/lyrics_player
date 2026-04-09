@@ -450,6 +450,23 @@ select {
   transition: opacity 0.22s ease, transform 0.22s ease;
 }
 
+.controls-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.controls-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.controls-panel::-webkit-scrollbar-thumb {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.controls-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .controls-panel.hidden {
   opacity: 0;
   transform: translateY(-10px);
