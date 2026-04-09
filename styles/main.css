@@ -10,6 +10,7 @@
   --progress: 0%;
   --lyrics-offset: 0px;
   --lyrics-scale: 1;
+  --focus-line-height: clamp(72px, calc(84px * var(--lyrics-scale)), 144px);
   --safe-bottom: max(24px, env(safe-area-inset-bottom));
 }
 
@@ -246,7 +247,7 @@ select {
   right: 0;
   top: 50%;
   z-index: 2;
-  height: 84px;
+  height: var(--focus-line-height);
   pointer-events: none;
   transform: translateY(-50%);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
