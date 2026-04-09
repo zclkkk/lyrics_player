@@ -344,36 +344,69 @@ select {
 }
 
 .progress {
-  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
   height: 8px;
-  overflow: hidden;
+  width: 100%;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+  outline: none;
+  border: 0;
+  background:
+    linear-gradient(90deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-2-rgb), 0.82)) 0 / var(--progress) 100% no-repeat,
+    rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 0 18px rgba(var(--accent-rgb), 0.12);
   cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 
-.progress::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: var(--progress);
-  border-radius: inherit;
-  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-2-rgb), 0.82));
-  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.24);
+.progress::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
 }
 
-.progress::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: var(--progress);
+.progress::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
   width: 14px;
   height: 14px;
+  margin-top: -3px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.95);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transform: translate(-50%, -50%);
+  border: 0;
+}
+
+.progress::-moz-range-track {
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.progress::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.progress::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-2-rgb), 0.82));
+}
+
+.progress:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.progress:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.12), 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
 .controls-panel {

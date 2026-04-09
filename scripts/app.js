@@ -381,17 +381,19 @@
   const updateProgress = () => {
     const currentTime = elements.audio.currentTime || 0;
     const duration = elements.audio.duration || 0;
-    const progressPercent = duration > 0 ? `${(currentTime / duration) * 100}%` : "0%";
+    const progressRatio = duration > 0 ? currentTime / duration : 0;
+    const progressPercent = `${progressRatio * 100}%`;
 
     elements.app.style.setProperty("--progress", progressPercent);
+    elements.progress.value = String(Math.round(progressRatio * Number(elements.progress.max)));
     elements.currentTime.textContent = formatTime(currentTime);
     elements.duration.textContent = formatTime(duration);
     updateLyrics();
   };
 
-  const seekByClientX = (clientX) => {
-    const rect = elements.progress.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
+  const seekByProgressValue = (rawValue) => {
+    const max = Number(elements.progress.max) || 1000;
+    const ratio = Math.min(1, Math.max(0, Number(rawValue) / max));
 
     if (Number.isFinite(elements.audio.duration) && elements.audio.duration > 0) {
       elements.audio.currentTime = ratio * elements.audio.duration;
@@ -539,17 +541,8 @@
     elements.audio.addEventListener("loadedmetadata", updateProgress);
     elements.audio.addEventListener("ended", updateProgress);
 
-    elements.progress.addEventListener("pointerdown", (event) => {
-      seekByClientX(event.clientX);
-
-      const onMove = (moveEvent) => seekByClientX(moveEvent.clientX);
-      const onUp = () => {
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-      };
-
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
+    elements.progress.addEventListener("input", (event) => {
+      seekByProgressValue(event.target.value);
     });
 
     window.addEventListener("keydown", (event) => {
