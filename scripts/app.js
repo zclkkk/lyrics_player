@@ -172,7 +172,13 @@
   };
 
   const parseLrc = (text) => {
-    const rows = String(text || "").replace(/\r/g, "").split("\n");
+    const normalizedText = String(text || "").replace(/\r/g, "");
+
+    if (!normalizedText.trim()) {
+      return [];
+    }
+
+    const rows = normalizedText.split("\n");
     const timePattern = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
     const lines = [];
 
@@ -199,7 +205,7 @@
     });
 
     lines.sort((a, b) => a.time - b.time);
-    return lines.length ? lines : [{ time: 0, text: TEXT.emptyLyrics }];
+    return lines;
   };
 
   const updateEmptyState = () => {
@@ -425,8 +431,8 @@
         <rect width="1200" height="1200" fill="url(#gradient)" />
         <circle cx="240" cy="250" r="180" fill="rgba(255,255,255,0.18)" />
         <circle cx="940" cy="900" r="260" fill="rgba(255,255,255,0.12)" />
-        <text x="90" y="930" fill="rgba(255,255,255,0.95)" font-size="108" font-family="Arial, sans-serif" font-weight="700">Cover Demo</text>
-        <text x="96" y="1020" fill="rgba(255,255,255,0.72)" font-size="44" font-family="Arial, sans-serif">YesPlayMusic style lyrics page</text>
+        <text x="90" y="930" fill="rgba(255,255,255,0.95)" font-size="108" font-family="Arial, sans-serif" font-weight="700">翻唱 Demo</text>
+        <text x="96" y="1020" fill="rgba(255,255,255,0.72)" font-size="44" font-family="Arial, sans-serif">YesPlayMusic 风格歌词页</text>
       </svg>
     `);
 
