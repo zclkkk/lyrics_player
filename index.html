@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YesPlayMusic 风格歌词录制页</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+
+<body>
+  <div class="app" id="app">
+    <div class="bg"></div>
+    <div class="grain"></div>
+
+    <div class="floating-tools">
+      <button class="mini-btn" id="togglePanelBtn" type="button">面板</button>
+      <button class="mini-btn" id="toggleRecordingBtn" type="button">录制模式</button>
+      <div class="badge" id="shortcutsBadge">空格 播放 / 暂停 · R 录制模式 · H 隐藏面板</div>
+    </div>
+
+    <aside class="controls-panel" id="panel">
+      <div class="panel-head">
+        <div class="panel-title" id="panelTitle">录制控制台</div>
+        <div class="panel-actions">
+          <button class="mini-btn" id="loadDemoBtn" type="button">加载示例</button>
+          <button class="mini-btn" id="resetViewBtn" type="button">回到开头</button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="row2">
+          <div class="field">
+            <label for="titleInput" id="songTitleLabel">歌名</label>
+            <input type="text" id="titleInput" value="你的翻唱作品" />
+          </div>
+          <div class="field">
+            <label for="artistInput" id="artistLabel">歌手 / 署名</label>
+            <input type="text" id="artistInput" value="你的名字 / 原唱信息" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="coverInput" id="coverLabel">封面</label>
+            <label class="file-label" for="coverInput" id="coverPickerLabel">选择封面图片</label>
+            <input class="hidden-input" id="coverInput" type="file" accept="image/*" />
+          </div>
+          <div class="field">
+            <label for="audioInput" id="audioLabel">音频</label>
+            <label class="file-label" for="audioInput" id="audioPickerLabel">选择音频文件</label>
+            <input class="hidden-input" id="audioInput" type="file" accept="audio/*" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="lrcInput" id="lrcLabel">LRC 歌词</label>
+          <textarea id="lrcInput" placeholder="粘贴 .lrc 内容，例如：&#10;[00:00.00]你的翻唱标题&#10;[00:12.30]第一句歌词"></textarea>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="fontScaleInput" id="fontScaleLabel">歌词字号</label>
+            <input type="range" id="fontScaleInput" min="80" max="140" value="100" />
+          </div>
+          <div class="field">
+            <label for="coverScaleInput" id="coverScaleLabel">封面尺寸</label>
+            <input type="range" id="coverScaleInput" min="26" max="42" value="35" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="bgDarknessInput" id="bgDarknessLabel">背景深浅</label>
+            <input type="range" id="bgDarknessInput" min="30" max="100" value="72" />
+          </div>
+          <div class="field">
+            <label for="bgBlurInput" id="bgBlurLabel">模糊强度</label>
+            <input type="range" id="bgBlurInput" min="20" max="150" value="80" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="bgAnimateInput" />
+            <span id="bgAnimateLabel">动态背景呼吸效果</span>
+          </label>
+        </div>
+
+        <div class="row2">
+          <button class="btn primary" id="playBtn" type="button">播放 / 暂停</button>
+          <button class="btn" id="recalcColorBtn" type="button">重新取色</button>
+        </div>
+
+        <div class="hint" id="workflowHint">
+          建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。
+        </div>
+      </div>
+
+      <div class="empty-state show" id="emptyState">
+        <span id="emptyStateLine1">导入音频与 LRC 后开始播放。</span><br />
+        <span id="emptyStateLine2">如果只想做静态镜头，也可以只导入封面和歌词。</span>
+      </div>
+    </aside>
+
+    <main class="shell">
+      <section class="left">
+        <div class="cover-wrap">
+          <div class="cover-glow"></div>
+          <img class="cover" id="cover" alt="歌曲封面" />
+        </div>
+
+        <div class="meta">
+          <div class="eyebrow">Now Playing</div>
+          <h1 class="title" id="title">你的翻唱作品</h1>
+          <div class="artist" id="artist">你的名字 / 原唱信息</div>
+          <div class="subline">
+            <span id="sublinePrimary">翻唱投稿可视化页面</span>
+            <span class="dot"></span>
+            <span id="sublineSecondary">模糊背景 · 自动取色 · 歌词同步</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="lyrics-focus-line"></div>
+        <div class="lyrics-track" id="lyricsTrack"></div>
+      </section>
+    </main>
+
+    <div class="bottom">
+      <div class="time" id="currentTime">00:00</div>
+      <input class="progress" id="progress" type="range" min="0" max="1000" step="1" value="0" aria-label="歌曲进度" />
+      <div class="time" id="duration">00:00</div>
+    </div>
+
+    <audio id="audio"></audio>
+  </div>
+
+  <script src="./scripts/app.js" defer></script>
+</body>
+
+</html>
