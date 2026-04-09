@@ -310,7 +310,10 @@ select {
   color: rgba(255, 255, 255, 0.98);
   transform: scale(1.018);
   filter: none;
-  text-shadow: 0 0 24px rgba(255, 255, 255, 0.08);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.18),
+    0 0 10px rgba(255, 255, 255, 0.08),
+    0 0 22px rgba(255, 255, 255, 0.06);
 }
 
 .lyric-line.near {
