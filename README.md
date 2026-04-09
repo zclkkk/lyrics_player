@@ -1,17 +1,17 @@
-# Lyrics Recording Page
+# 歌词录制页
 
-A cleaned-up single-page project for cover-song visuals, lyric sync and screen recording.
+一个整理过的单页小项目，用来做翻唱投稿、歌词同步和录屏展示。
 
-## Structure
+## 目录结构
 
-`test.html`: page entry and markup
+`test.html`：页面入口和结构
 
-`styles/main.css`: visual styles
+`styles/main.css`：页面样式
 
-`scripts/app.js`: interaction logic, lyric parsing and audio sync
+`scripts/app.js`：交互逻辑、歌词解析和音频同步
 
-## Usage
+## 使用方式
 
-Open `test.html` in a browser.
+直接在浏览器里打开 `test.html`。
 
-Import a cover image, an audio file and LRC lyrics to preview the page. Switch to recording mode when you are ready to capture it with OBS or any screen recorder.
+导入封面、音频和 LRC 后即可预览；切到录制模式后，可以配合 OBS 或系统录屏使用。

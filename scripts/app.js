@@ -1,54 +1,63 @@
 (() => {
   const TEXT = {
-    pageTitle: "Lyrics Recording Page",
-    panelButton: "Panel",
-    recordingMode: "Recording",
-    exitRecordingMode: "Exit Recording",
-    shortcuts: "Space Play / Pause | R Recording | H Hide Panel",
-    panelTitle: "Recording Console",
-    loadDemo: "Load Demo",
-    resetView: "Reset View",
-    songTitleLabel: "Song Title",
-    artistLabel: "Artist / Credit",
-    coverLabel: "Cover",
-    coverPicker: "Choose Cover Image",
-    audioLabel: "Audio",
-    audioPicker: "Choose Audio File",
-    lrcLabel: "LRC Lyrics",
-    lrcPlaceholder: "Paste .lrc content, for example:\n[00:00.00]Your cover title\n[00:12.30]First lyric line",
-    fontScaleLabel: "Lyrics Size",
-    coverScaleLabel: "Cover Size",
-    playPause: "Play / Pause",
-    recalcColor: "Recalculate Colors",
+    pageTitle: "YesPlayMusic 风格歌词录制页",
+    panelButton: "面板",
+    recordingMode: "录制模式",
+    exitRecordingMode: "退出录制模式",
+    shortcuts: "空格 播放 / 暂停 · R 录制模式 · H 隐藏面板",
+    panelTitle: "录制控制台",
+    loadDemo: "加载示例",
+    resetView: "重置视图",
+    songTitleLabel: "歌名",
+    artistLabel: "歌手 / 署名",
+    coverLabel: "封面",
+    coverPicker: "选择封面图片",
+    audioLabel: "音频",
+    audioPicker: "选择音频文件",
+    lrcLabel: "LRC 歌词",
+    lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
+    fontScaleLabel: "歌词字号",
+    coverScaleLabel: "封面尺寸",
+    playPause: "播放 / 暂停",
+    recalcColor: "重新取色",
     workflowHint:
-      "Import cover art, audio and LRC, then switch to recording mode after playback starts. You can capture the page with OBS or any screen recorder.",
-    coverAlt: "Song Cover",
-    defaultTitle: "Your Cover Track",
-    defaultArtist: "Your Name / Original Artist",
-    sublinePrimary: "Cover Submission Visualizer",
-    sublineSecondary: "Blurred Background | Auto Colors | Synced Lyrics",
-    emptyStateLine1: "Import audio and LRC to start playback.",
-    emptyStateLine2: "You can also preview a static scene with only cover art and lyrics.",
-    untitledSong: "Untitled Track",
-    unknownArtist: "Unknown Artist",
-    emptyLyrics: "Import or paste LRC lyrics",
-    demoTitle: "Starlight Cover Demo",
-    demoArtist: "Your Name | Cover"
+      "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
+    coverAlt: "歌曲封面",
+    defaultTitle: "你的翻唱作品",
+    defaultArtist: "你的名字 / 原唱信息",
+    sublinePrimary: "翻唱投稿可视化页面",
+    sublineSecondary: "模糊背景 · 自动取色 · 歌词同步",
+    emptyStateLine1: "导入音频与 LRC 后开始播放。",
+    emptyStateLine2: "如果只想做静态镜头，也可以只导入封面和歌词。",
+    untitledSong: "未命名作品",
+    unknownArtist: "未知歌手",
+    emptyLyrics: "请导入或粘贴 LRC 歌词",
+    demoTitle: "夜空中最亮的星（翻唱）",
+    demoArtist: "你的名字 · Cover"
   };
 
   const demo = {
     title: TEXT.demoTitle,
     artist: TEXT.demoArtist,
-    lrc: `[00:00.00]Starlight Cover Demo
-[00:04.00]Your Name | Cover
-[00:10.40]You can replace this demo with your own lyrics
-[00:15.30]Import audio, cover art and LRC
-[00:20.10]Then switch to recording mode
-[00:24.40]And capture the page with OBS
-[00:31.10]The active lyric stays centered
-[00:35.90]Nearby lines remain visible
-[00:40.60]The background colors follow the cover
-[00:45.00]And the progress bar stays draggable`
+    lrc: `[00:00.00]夜空中最亮的星（翻唱）
+[00:04.00]你的名字 · Cover
+[00:10.40]夜空中最亮的星
+[00:15.30]能否听清
+[00:20.10]那仰望的人
+[00:24.40]心底的孤独和叹息
+[00:31.10]夜空中最亮的星
+[00:35.90]能否记起
+[00:40.60]曾与我同行
+[00:45.00]消失在风里的身影
+[00:52.00]
+[00:56.50]我祈祷拥有一颗透明的心灵
+[01:03.00]和会流泪的眼睛
+[01:08.30]给我再去相信的勇气
+[01:13.80]越过谎言去拥抱你
+[01:19.60]每当我找不到存在的意义
+[01:26.00]每当我迷失在黑夜里
+[01:31.40]夜空中最亮的星
+[01:36.00]请指引我靠近你`
   };
 
   const state = {
@@ -285,7 +294,7 @@
         const { base, bright } = getDominantColors(probeImage);
         applyAccent(base, bright);
       } catch (error) {
-        console.warn("Color extraction failed, keeping the current palette.", error);
+        console.warn("取色失败，已保留当前配色。", error);
       }
     };
 
@@ -398,7 +407,7 @@
         <circle cx="240" cy="250" r="180" fill="rgba(255,255,255,0.18)" />
         <circle cx="940" cy="900" r="260" fill="rgba(255,255,255,0.12)" />
         <text x="90" y="930" fill="rgba(255,255,255,0.95)" font-size="108" font-family="Arial, sans-serif" font-weight="700">Cover Demo</text>
-        <text x="96" y="1020" fill="rgba(255,255,255,0.72)" font-size="44" font-family="Arial, sans-serif">Lyrics recording layout</text>
+        <text x="96" y="1020" fill="rgba(255,255,255,0.72)" font-size="44" font-family="Arial, sans-serif">YesPlayMusic style lyrics page</text>
       </svg>
     `);
 
