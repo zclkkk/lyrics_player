@@ -7,7 +7,7 @@
     shortcuts: "空格 播放 / 暂停 · R 录制模式 · H 隐藏面板",
     panelTitle: "录制控制台",
     loadDemo: "加载示例",
-    resetView: "重置视图",
+    resetView: "回到开头",
     songTitleLabel: "歌名",
     artistLabel: "歌手 / 署名",
     coverLabel: "封面",
