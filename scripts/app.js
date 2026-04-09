@@ -457,7 +457,7 @@
 
   const handleFontScale = (event) => {
     const scale = Number(event.target.value) / 100;
-    elements.lyricsTrack.style.fontSize = `${scale}em`;
+    document.documentElement.style.setProperty("--lyrics-scale", String(scale));
   };
 
   const handleCoverScale = (event) => {
@@ -562,6 +562,7 @@
     state.lyrics = parseLrc("");
     syncTextInputs();
     bindEvents();
+    handleFontScale({ target: elements.fontScaleInput });
     renderLyrics();
     loadDemo();
     updateProgress();
