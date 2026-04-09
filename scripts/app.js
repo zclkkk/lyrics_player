@@ -64,6 +64,7 @@
     title: TEXT.defaultTitle,
     artist: TEXT.defaultArtist,
     coverUrl: "",
+    audioUrl: "",
     lyrics: [],
     currentIndex: 0,
     recordingMode: false,
@@ -147,6 +148,15 @@
   const revokeObjectUrls = () => {
     state.objectUrls.forEach((url) => URL.revokeObjectURL(url));
     state.objectUrls = [];
+  };
+
+  const revokeTrackedObjectUrl = (url) => {
+    if (!url || !url.startsWith("blob:")) {
+      return;
+    }
+
+    URL.revokeObjectURL(url);
+    state.objectUrls = state.objectUrls.filter((trackedUrl) => trackedUrl !== url);
   };
 
   const formatTime = (seconds) => {
@@ -302,6 +312,10 @@
   };
 
   const setCover = (url) => {
+    if (state.coverUrl && state.coverUrl !== url) {
+      revokeTrackedObjectUrl(state.coverUrl);
+    }
+
     state.coverUrl = url;
     elements.cover.src = url;
     elements.app.style.setProperty("--bg-image", `url("${url.replace(/"/g, '\\"')}")`);
@@ -309,6 +323,11 @@
   };
 
   const setAudio = (url) => {
+    if (state.audioUrl && state.audioUrl !== url) {
+      revokeTrackedObjectUrl(state.audioUrl);
+    }
+
+    state.audioUrl = url;
     elements.audio.src = url;
     elements.audio.load();
     updateEmptyState();
@@ -458,10 +477,11 @@
   const handleFontScale = (event) => {
     const scale = Number(event.target.value) / 100;
     document.documentElement.style.setProperty("--lyrics-scale", String(scale));
+    updateLyrics(true);
   };
 
   const handleCoverScale = (event) => {
-    document.documentElement.style.setProperty("--cover-size", `${Number(event.target.value)}vw`);
+    document.documentElement.style.setProperty("--cover-size", `min(${Number(event.target.value)}vw, 440px)`);
   };
 
   const togglePlayback = async () => {
@@ -563,6 +583,7 @@
     syncTextInputs();
     bindEvents();
     handleFontScale({ target: elements.fontScaleInput });
+    handleCoverScale({ target: elements.coverScaleInput });
     renderLyrics();
     loadDemo();
     updateProgress();
