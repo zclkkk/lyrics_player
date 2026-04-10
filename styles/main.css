@@ -501,6 +501,14 @@ select {
   transform: translateY(-1px);
 }
 
+.btn:disabled,
+.mini-btn:disabled,
+.file-label:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
 .btn.primary {
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.95), rgba(var(--accent-2-rgb), 0.84));
   color: #1a0e0b;
@@ -558,6 +566,10 @@ select {
   color: rgba(255, 255, 255, 0.45);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.export-status {
+  min-height: 2.9em;
 }
 
 .checkbox-label {
