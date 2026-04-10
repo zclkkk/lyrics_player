@@ -134,7 +134,7 @@ select {
   align-items: flex-start;
   justify-content: center;
   min-width: 0;
-  padding-left: clamp(4px, 1.4vw, 18px);
+  padding-left: clamp(60px, 8vw, 160px);
 }
 
 .cover-wrap {
