@@ -134,6 +134,7 @@
     cover: $("cover"),
     title: $("title"),
     artist: $("artist"),
+    lyricsViewport: $("lyricsViewport"),
     lyricsTrack: $("lyricsTrack"),
     currentTime: $("currentTime"),
     duration: $("duration"),
@@ -635,8 +636,9 @@
     const activeLine = activeIndex >= 0 ? lyricLines[activeIndex] : lyricLines[0];
 
     if (activeLine) {
+      const viewportHeight = elements.lyricsViewport?.clientHeight || elements.lyricsTrack.clientHeight;
       const targetOffset =
-        elements.lyricsTrack.clientHeight / 2 - activeLine.offsetTop - activeLine.offsetHeight / 2;
+        viewportHeight / 2 - activeLine.offsetTop - activeLine.offsetHeight / 2;
 
       elements.app.style.setProperty("--lyrics-offset", `${targetOffset}px`);
     }
