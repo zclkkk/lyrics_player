@@ -103,6 +103,9 @@
     displayStream: null,
     shouldSaveExport: false,
     recordingMimeType: "",
+    exportAudioLeadInMs: 0,
+    pendingPlaybackStartCancel: null,
+    playbackSyncFrame: 0,
     ffmpeg: null,
     ffmpegLoadPromise: null,
     ffmpegAssetUrls: [],
@@ -440,6 +443,97 @@
     updateLyrics();
   };
 
+  const stopPlaybackSyncLoop = () => {
+    if (state.playbackSyncFrame) {
+      cancelAnimationFrame(state.playbackSyncFrame);
+      state.playbackSyncFrame = 0;
+    }
+  };
+
+  const startPlaybackSyncLoop = () => {
+    if (state.playbackSyncFrame) {
+      return;
+    }
+
+    const tick = () => {
+      updateProgress();
+
+      if (elements.audio.paused || elements.audio.ended) {
+        state.playbackSyncFrame = 0;
+        return;
+      }
+
+      state.playbackSyncFrame = requestAnimationFrame(tick);
+    };
+
+    state.playbackSyncFrame = requestAnimationFrame(tick);
+  };
+
+  const clearPendingPlaybackStart = () => {
+    if (typeof state.pendingPlaybackStartCancel === "function") {
+      state.pendingPlaybackStartCancel();
+      state.pendingPlaybackStartCancel = null;
+    }
+  };
+
+  const observeAudioPlaybackStart = (audioElement) => {
+    let finished = false;
+    let fallbackTimer = 0;
+
+    const cleanup = () => {
+      audioElement.removeEventListener("playing", handleStart);
+      audioElement.removeEventListener("timeupdate", handleStart);
+      audioElement.removeEventListener("error", handleError);
+      if (fallbackTimer) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = 0;
+      }
+    };
+
+    const finalize = (callback) => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      cleanup();
+      callback();
+    };
+
+    const handleStart = () => {
+      finalize(() => resolvePlayback(performance.now()));
+    };
+
+    const handleError = () => {
+      finalize(() => rejectPlayback(audioElement.error || new Error("AUDIO_PLAYBACK_START_FAILED")));
+    };
+
+    let resolvePlayback;
+    let rejectPlayback;
+
+    const promise = new Promise((resolve, reject) => {
+      resolvePlayback = resolve;
+      rejectPlayback = reject;
+    });
+
+    audioElement.addEventListener("playing", handleStart);
+    audioElement.addEventListener("timeupdate", handleStart);
+    audioElement.addEventListener("error", handleError);
+
+    fallbackTimer = window.setTimeout(() => {
+      if (!audioElement.paused) {
+        handleStart();
+      }
+    }, 1200);
+
+    return {
+      promise,
+      cancel: () => {
+        finalize(() => rejectPlayback(new Error("AUDIO_PLAYBACK_START_CANCELLED")));
+      }
+    };
+  };
+
   const seekByProgressValue = (rawValue) => {
     const max = Number(elements.progress.max) || 1000;
     const ratio = Math.min(1, Math.max(0, Number(rawValue) / max));
@@ -599,16 +693,19 @@
   };
 
   const resetExportSession = () => {
+    clearPendingPlaybackStart();
     state.mediaRecorder = null;
     state.recordedChunks = [];
     state.shouldSaveExport = false;
     state.recordingMimeType = "";
+    state.exportAudioLeadInMs = 0;
   };
 
   const teardownExportUi = () => {
     state.isExporting = false;
     document.body.classList.remove("is-exporting");
     setRecordingMode(false);
+    clearPendingPlaybackStart();
     elements.audio.pause();
     elements.audio.removeEventListener("ended", stopExporting);
     updateExportUi();
@@ -655,28 +752,33 @@
     }));
   };
 
-  const muxRecordedVideo = async (recordedBlob) => {
+  const muxRecordedVideo = async (recordedBlob, audioFile, audioLeadInMs = 0) => {
     if (!state.ffmpeg) {
       throw new Error("EXPORT_ENGINE_NOT_READY");
     }
 
-    if (!state.audioFile) {
+    if (!audioFile) {
       throw new Error("EXPORT_AUDIO_FILE_MISSING");
     }
 
     state.exportJobCount += 1;
     const jobId = state.exportJobCount;
     const ffmpeg = state.ffmpeg;
-    const audioExtension = getFileExtension(state.audioFile.name) || ".bin";
+    const audioExtension = getFileExtension(audioFile.name) || ".bin";
     const captureInputName = `capture-${jobId}.webm`;
     const audioInputName = `audio-${jobId}${audioExtension}`;
     const outputName = `export-${jobId}.mkv`;
+    const audioOffsetSeconds = Math.max(0, audioLeadInMs) / 1000;
+    const audioOffsetArgs = audioOffsetSeconds > 0.001
+      ? ["-itsoffset", audioOffsetSeconds.toFixed(3)]
+      : [];
 
     try {
       await ffmpeg.writeFile(captureInputName, new Uint8Array(await recordedBlob.arrayBuffer()));
-      await ffmpeg.writeFile(audioInputName, new Uint8Array(await state.audioFile.arrayBuffer()));
+      await ffmpeg.writeFile(audioInputName, new Uint8Array(await audioFile.arrayBuffer()));
       await ffmpeg.exec([
         "-i", captureInputName,
+        ...audioOffsetArgs,
         "-i", audioInputName,
         "-map", "0:v:0",
         "-map", "1:a:0",
@@ -879,11 +981,13 @@
     const recordedBlob = new Blob(state.recordedChunks, {
       type: recordingMimeType
     });
+    const audioFile = state.audioFile;
+    const audioLeadInMs = state.exportAudioLeadInMs;
     resetExportSession();
     setExportStatus(TEXT.exportMuxingHint);
 
     try {
-      const muxedBlob = await muxRecordedVideo(recordedBlob);
+      const muxedBlob = await muxRecordedVideo(recordedBlob, audioFile, audioLeadInMs);
       downloadBlob(muxedBlob, `${getSafeExportBaseName()}.mkv`);
       setExportStatus(TEXT.exportDoneHint);
     } catch (error) {
@@ -957,6 +1061,7 @@
       state.recordedChunks = [];
       state.shouldSaveExport = true;
       state.recordingMimeType = getSupportedRecordingMimeType();
+      state.exportAudioLeadInMs = 0;
 
       const recorderOptions = state.recordingMimeType
         ? { mimeType: state.recordingMimeType }
@@ -984,13 +1089,27 @@
       updateExportUi();
       setExportStatus(TEXT.exportRecordingHint);
 
+      const playbackStartObserver = observeAudioPlaybackStart(elements.audio);
+      state.pendingPlaybackStartCancel = playbackStartObserver.cancel;
+      const recordingStartedAt = performance.now();
       state.mediaRecorder.start(1000);
 
       try {
         await elements.audio.play();
+        const playbackStartedAt = await playbackStartObserver.promise;
+        state.pendingPlaybackStartCancel = null;
+        state.exportAudioLeadInMs = Math.max(0, playbackStartedAt - recordingStartedAt);
       } catch (error) {
+        clearPendingPlaybackStart();
+        if (error?.message === "AUDIO_PLAYBACK_START_CANCELLED" && !state.isExporting) {
+          return;
+        }
         console.error("Audio playback failed during export:", error);
         stopExporting(false);
+        return;
+      }
+
+      if (!state.isExporting) {
         return;
       }
 
@@ -1074,9 +1193,17 @@
       updateLyrics(true);
     });
 
+    elements.audio.addEventListener("play", startPlaybackSyncLoop);
+    elements.audio.addEventListener("pause", () => {
+      stopPlaybackSyncLoop();
+      updateProgress();
+    });
     elements.audio.addEventListener("timeupdate", updateProgress);
     elements.audio.addEventListener("loadedmetadata", updateProgress);
-    elements.audio.addEventListener("ended", updateProgress);
+    elements.audio.addEventListener("ended", () => {
+      stopPlaybackSyncLoop();
+      updateProgress();
+    });
 
     elements.progress.addEventListener("input", (event) => {
       seekByProgressValue(event.target.value);
@@ -1160,6 +1287,8 @@
     window.addEventListener("drop", handleDrop);
 
     window.addEventListener("beforeunload", () => {
+      stopPlaybackSyncLoop();
+      clearPendingPlaybackStart();
       revokeObjectUrls();
       revokeFfmpegAssetUrls();
       if (state.ffmpeg) {
