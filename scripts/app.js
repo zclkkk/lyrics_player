@@ -104,7 +104,6 @@
     fontScaleInput: $("fontScaleInput"),
     coverScaleInput: $("coverScaleInput"),
     playBtn: $("playBtn"),
-    recalcColorBtn: $("recalcColorBtn"),
     togglePanelBtn: $("togglePanelBtn"),
     toggleRecordingBtn: $("toggleRecordingBtn"),
     loadDemoBtn: $("loadDemoBtn"),
@@ -153,7 +152,6 @@
     elements.bgBlurLabel.textContent = TEXT.bgBlurLabel;
     elements.bgAnimateLabel.textContent = TEXT.bgAnimateLabel;
     elements.playBtn.textContent = TEXT.playPause;
-    elements.recalcColorBtn.textContent = TEXT.recalcColor;
     elements.workflowHint.textContent = TEXT.workflowHint;
     elements.cover.alt = TEXT.coverAlt;
     elements.sublinePrimary.textContent = TEXT.sublinePrimary;
@@ -218,8 +216,7 @@
       if (!matched && row.trim()) {
         const trimmed = row.trim();
         if (!/^\[[a-z]+:/i.test(trimmed)) {
-          alert("LRC 格式异常：检测到无时间标签的文本，请修正后再导入！");
-          return [];
+          return [{ time: 0, text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】" }];
         }
         lines.push({ time: Number.POSITIVE_INFINITY, text: trimmed });
       }
@@ -248,10 +245,14 @@
   };
 
   const syncTextInputs = () => {
-    elements.title.textContent = state.title;
-    elements.artist.textContent = state.artist;
-    elements.titleInput.value = state.title;
-    elements.artistInput.value = state.artist;
+    elements.title.textContent = state.title || TEXT.untitledSong;
+    elements.artist.textContent = state.artist || TEXT.unknownArtist;
+    if (elements.titleInput.value !== state.title) {
+      elements.titleInput.value = state.title;
+    }
+    if (elements.artistInput.value !== state.artist) {
+      elements.artistInput.value = state.artist;
+    }
   };
 
   const getDominantColors = (image) => {
@@ -494,12 +495,12 @@
   };
 
   const handleTitleInput = (event) => {
-    state.title = event.target.value.trim() || TEXT.untitledSong;
+    state.title = event.target.value;
     syncTextInputs();
   };
 
   const handleArtistInput = (event) => {
-    state.artist = event.target.value.trim() || TEXT.unknownArtist;
+    state.artist = event.target.value;
     syncTextInputs();
   };
 
@@ -707,7 +708,6 @@
     elements.bgAnimateInput.addEventListener("change", handleBgAnimate);
 
     elements.playBtn.addEventListener("click", togglePlayback);
-    elements.recalcColorBtn.addEventListener("click", recalcCoverColor);
     elements.exportVideoBtn.addEventListener("click", startExporting);
     elements.togglePanelBtn.addEventListener("click", () => setPanelHidden(!state.panelHidden));
     elements.toggleRecordingBtn.addEventListener("click", () => setRecordingMode(!state.recordingMode));
@@ -746,6 +746,21 @@
           return;
         }
         setRecordingMode(!state.recordingMode);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        if (state.isExporting) {
+          stopExporting();
+          return;
+        }
+        if (state.recordingMode) {
+          setRecordingMode(false);
+          return;
+        }
+        if (document.activeElement) {
+          document.activeElement.blur();
+        }
         return;
       }
 
