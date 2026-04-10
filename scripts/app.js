@@ -699,17 +699,25 @@
       }
 
       if (event.code === "Space") {
+        if (event.target && ["BUTTON", "SELECT"].includes(event.target.tagName)) {
+          return;
+        }
         event.preventDefault();
         elements.playBtn.click();
         return;
       }
 
       if (event.key.toLowerCase() === "r") {
+        if (state.isExporting) {
+          stopExporting();
+          return;
+        }
         setRecordingMode(!state.recordingMode);
         return;
       }
 
       if (event.key.toLowerCase() === "h") {
+        if (state.isExporting) return;
         setPanelHidden(!state.panelHidden);
         return;
       }
