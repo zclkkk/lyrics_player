@@ -69,10 +69,11 @@
     coverUrl: "",
     audioUrl: "",
     lyrics: [],
-    currentIndex: 0,
+    currentIndex: -1,
     recordingMode: false,
     panelHidden: false,
     objectUrls: [],
+    lastExportUrl: null,
     isExporting: false,
     mediaRecorder: null,
     recordedChunks: [],
@@ -96,7 +97,6 @@
     duration: $("duration"),
     progress: $("progress"),
     panel: $("panel"),
-    emptyState: $("emptyState"),
     titleInput: $("titleInput"),
     artistInput: $("artistInput"),
     lrcInput: $("lrcInput"),
@@ -129,9 +129,7 @@
     bgAnimateLabel: $("bgAnimateLabel"),
     workflowHint: $("workflowHint"),
     sublinePrimary: $("sublinePrimary"),
-    sublineSecondary: $("sublineSecondary"),
-    emptyStateLine1: $("emptyStateLine1"),
-    emptyStateLine2: $("emptyStateLine2")
+    sublineSecondary: $("sublineSecondary")
   };
 
   const applyStaticText = () => {
@@ -161,8 +159,7 @@
     elements.cover.alt = TEXT.coverAlt;
     elements.sublinePrimary.textContent = TEXT.sublinePrimary;
     elements.sublineSecondary.textContent = TEXT.sublineSecondary;
-    elements.emptyStateLine1.textContent = TEXT.emptyStateLine1;
-    elements.emptyStateLine2.textContent = TEXT.emptyStateLine2;
+
   };
 
   const revokeObjectUrls = () => {
@@ -202,7 +199,7 @@
     const timePattern = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
     const lines = [];
 
-    rows.forEach((row) => {
+    for (const row of rows) {
       const content = row.replace(timePattern, "").trim();
       let matched = false;
 
@@ -220,16 +217,17 @@
       }
 
       if (!matched && row.trim()) {
-        lines.push({ time: Number.POSITIVE_INFINITY, text: row.trim() });
+        const trimmed = row.trim();
+        if (!/^\[[a-z]+:/i.test(trimmed)) {
+          alert("LRC 格式异常：检测到无时间标签的文本，请修正后再导入！");
+          return [];
+        }
+        lines.push({ time: Number.POSITIVE_INFINITY, text: trimmed });
       }
-    });
+    }
 
     lines.sort((a, b) => a.time - b.time);
     return lines;
-  };
-
-  const updateEmptyState = () => {
-    elements.emptyState.classList.toggle("show", !state.lyrics.length || !elements.audio.src);
   };
 
   const renderLyrics = () => {
@@ -247,7 +245,7 @@
     });
 
     updateLyrics(true);
-    updateEmptyState();
+
   };
 
   const syncTextInputs = () => {
@@ -356,7 +354,7 @@
     state.audioUrl = url;
     elements.audio.src = url;
     elements.audio.load();
-    updateEmptyState();
+
   };
 
   const updateLyrics = (force = false) => {
@@ -366,7 +364,7 @@
       return;
     }
 
-    let activeIndex = 0;
+    let activeIndex = -1;
     const currentTime = elements.audio.currentTime || 0;
 
     for (let index = 0; index < state.lyrics.length; index += 1) {
@@ -388,7 +386,7 @@
       lineElement.classList.toggle("near", Math.abs(index - activeIndex) <= 1 && index !== activeIndex);
     });
 
-    const activeLine = lyricLines[activeIndex];
+    const activeLine = activeIndex >= 0 ? lyricLines[activeIndex] : lyricLines[0];
 
     if (activeLine) {
       const targetOffset =
@@ -459,7 +457,7 @@
     `);
 
     setCover(`data:image/svg+xml;charset=utf-8,${svg}`);
-    updateEmptyState();
+
   };
 
   const handleTitleInput = (event) => {
@@ -499,7 +497,7 @@
     const objectUrl = URL.createObjectURL(file);
     state.objectUrls.push(objectUrl);
     setAudio(objectUrl);
-    updateEmptyState();
+
   };
 
   const handleFontScale = (event) => {
@@ -560,7 +558,10 @@
       type: state.recordedChunks[0]?.type || 'video/webm'
     });
     const url = URL.createObjectURL(blob);
-    state.objectUrls.push(url);
+    if (state.lastExportUrl) {
+      URL.revokeObjectURL(state.lastExportUrl);
+    }
+    state.lastExportUrl = url;
 
     const a = document.createElement("a");
     a.style.display = "none";
@@ -579,6 +580,18 @@
       return;
     }
 
+    if (!state.audioContext) {
+      state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
+      state.audioDestination = state.audioContext.createMediaStreamDestination();
+      state.audioSource.connect(state.audioDestination);
+      state.audioSource.connect(state.audioContext.destination);
+    }
+
+    if (state.audioContext.state === 'suspended') {
+      await state.audioContext.resume();
+    }
+
     try {
       const videoStream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: "browser" },
@@ -589,18 +602,6 @@
 
       elements.audio.pause();
       elements.audio.currentTime = 0;
-
-      if (!state.audioContext) {
-        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
-        state.audioDestination = state.audioContext.createMediaStreamDestination();
-        state.audioSource.connect(state.audioDestination);
-        state.audioSource.connect(state.audioContext.destination);
-      }
-
-      if (state.audioContext.state === 'suspended') {
-        await state.audioContext.resume();
-      }
 
       const audioStream = state.audioDestination.stream;
       const stream = new MediaStream([
@@ -698,17 +699,25 @@
       }
 
       if (event.code === "Space") {
+        if (event.target && ["BUTTON", "SELECT"].includes(event.target.tagName)) {
+          return;
+        }
         event.preventDefault();
         elements.playBtn.click();
         return;
       }
 
       if (event.key.toLowerCase() === "r") {
+        if (state.isExporting) {
+          stopExporting();
+          return;
+        }
         setRecordingMode(!state.recordingMode);
         return;
       }
 
       if (event.key.toLowerCase() === "h") {
+        if (state.isExporting) return;
         setPanelHidden(!state.panelHidden);
         return;
       }
