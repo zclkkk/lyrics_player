@@ -739,3 +739,14 @@ body.is-exporting .floating-tools > :not(.recording-badge) {
   }
 
 }
+
+body.drag-over::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(10, 10, 14, 0.5);
+  backdrop-filter: blur(4px);
+  border: 4px dashed rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
