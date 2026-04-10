@@ -17,6 +17,7 @@
     <div class="grain"></div>
 
     <div class="floating-tools">
+      <div class="badge recording-badge hidden" id="recordingBadge"><div></div> REC / 录制中</div>
       <button class="mini-btn" id="togglePanelBtn" type="button">面板</button>
       <button class="mini-btn" id="toggleRecordingBtn" type="button">录制模式</button>
       <div class="badge" id="shortcutsBadge">空格 播放 / 暂停 · R 录制模式 · H 隐藏面板</div>
@@ -95,8 +96,10 @@
           <button class="btn" id="recalcColorBtn" type="button">重新取色</button>
         </div>
 
+        <button class="btn" id="exportVideoBtn" type="button" style="background: linear-gradient(135deg, rgba(255, 90, 90, 0.95), rgba(255, 120, 120, 0.84)); color: #fff; font-weight: 800;">● 一键导出视频 (内设录屏)</button>
+
         <div class="hint" id="workflowHint">
-          建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。
+          提示：也可以使用传统工作流，切到录制模式后使用 OBS 直接采集此网页。
         </div>
       </div>
 
