@@ -22,6 +22,9 @@
     bgBlurLabel: "模糊强度",
     bgAnimateLabel: "动态背景呼吸效果",
     playPause: "播放 / 暂停",
+    exportRequiresAudio: "请先导入音频！",
+    exportUnsupported: "当前浏览器不支持一键导出，请改用 OBS 或系统录屏。",
+    exportStartFailed: "一键导出启动失败，请重试，或改用 OBS / 系统录屏。",
     recalcColor: "重新取色",
     workflowHint:
       "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
@@ -79,7 +82,10 @@
     recordedChunks: [],
     audioContext: null,
     audioDestination: null,
-    audioSource: null
+    audioSource: null,
+    displayStream: null,
+    exportAudioTracks: [],
+    shouldSaveExport: false
   };
 
   const $ = (id) => document.getElementById(id);
@@ -430,6 +436,57 @@
     elements.panel.classList.toggle("hidden", hidden);
   };
 
+  const getAudioContextConstructor = () => window.AudioContext || window.webkitAudioContext;
+
+  const supportsInlineExport = () =>
+    Boolean(navigator.mediaDevices?.getDisplayMedia) &&
+    typeof MediaRecorder !== "undefined" &&
+    Boolean(getAudioContextConstructor());
+
+  const ensureExportAudioGraph = async () => {
+    const AudioContextConstructor = getAudioContextConstructor();
+
+    if (!AudioContextConstructor || !supportsInlineExport()) {
+      throw new Error("EXPORT_UNSUPPORTED");
+    }
+
+    if (!state.audioContext) {
+      state.audioContext = new AudioContextConstructor();
+      state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
+      state.audioDestination = state.audioContext.createMediaStreamDestination();
+      state.audioSource.connect(state.audioDestination);
+      state.audioSource.connect(state.audioContext.destination);
+    }
+
+    if (state.audioContext.state === "suspended") {
+      await state.audioContext.resume();
+    }
+  };
+
+  const releaseExportTracks = () => {
+    if (state.displayStream) {
+      state.displayStream.getTracks().forEach((track) => track.stop());
+      state.displayStream = null;
+    }
+
+    state.exportAudioTracks.forEach((track) => track.stop());
+    state.exportAudioTracks = [];
+  };
+
+  const resetExportSession = () => {
+    state.mediaRecorder = null;
+    state.recordedChunks = [];
+    state.shouldSaveExport = false;
+  };
+
+  const teardownExportUi = () => {
+    state.isExporting = false;
+    document.body.classList.remove("is-exporting");
+    setRecordingMode(false);
+    elements.audio.pause();
+    elements.audio.removeEventListener("ended", stopExporting);
+  };
+
   const loadDemo = () => {
     state.title = demo.title;
     state.artist = demo.artist;
@@ -569,27 +626,33 @@
     }
   };
 
-  const stopExporting = () => {
-    if (!state.isExporting) return;
-    state.isExporting = false;
-    document.body.classList.remove("is-exporting");
-    setRecordingMode(false);
-    elements.audio.pause();
+  const stopExporting = (shouldSave = true) => {
+    if (!state.isExporting && !state.mediaRecorder && !state.displayStream) {
+      return;
+    }
+
+    const saveExport = shouldSave !== false;
+
+    teardownExportUi();
+    state.shouldSaveExport = saveExport;
 
     if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
       state.mediaRecorder.stop();
+    } else {
+      resetExportSession();
     }
-    
-    if (state.mediaRecorder && state.mediaRecorder.stream) {
-      state.mediaRecorder.stream.getTracks().forEach(track => track.stop());
-    }
-    
-    elements.audio.removeEventListener("ended", stopExporting);
+
+    releaseExportTracks();
   };
 
   const finishExporting = () => {
+    if (!state.shouldSaveExport || !state.recordedChunks.length) {
+      resetExportSession();
+      return;
+    }
+
     const blob = new Blob(state.recordedChunks, {
-      type: state.recordedChunks[0]?.type || 'video/webm'
+      type: state.recordedChunks[0]?.type || "video/webm"
     });
     const url = URL.createObjectURL(blob);
     if (state.lastExportUrl) {
@@ -606,46 +669,64 @@
     setTimeout(() => {
       document.body.removeChild(a);
     }, 100);
+
+    resetExportSession();
   };
 
   const startExporting = async () => {
-    if (!elements.audio.src) {
-      alert("请先导入音频！");
+    if (state.isExporting) {
       return;
     }
 
-    if (!state.audioContext) {
-      state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
-      state.audioDestination = state.audioContext.createMediaStreamDestination();
-      state.audioSource.connect(state.audioDestination);
-      state.audioSource.connect(state.audioContext.destination);
+    if (!elements.audio.src) {
+      alert(TEXT.exportRequiresAudio);
+      return;
     }
 
-    if (state.audioContext.state === 'suspended') {
-      await state.audioContext.resume();
+    if (!supportsInlineExport()) {
+      alert(TEXT.exportUnsupported);
+      return;
     }
 
     try {
+      await ensureExportAudioGraph();
+
       const videoStream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: "browser" },
         audio: false,
         preferCurrentTab: true,
         selfBrowserSurface: "include"
       });
+      const videoTrack = videoStream.getVideoTracks()[0];
+
+      if (!videoTrack) {
+        videoStream.getTracks().forEach((track) => track.stop());
+        throw new Error("EXPORT_VIDEO_TRACK_MISSING");
+      }
 
       elements.audio.pause();
       elements.audio.currentTime = 0;
 
-      const audioStream = state.audioDestination.stream;
+      state.displayStream = videoStream;
+      state.exportAudioTracks = state.audioDestination.stream
+        .getAudioTracks()
+        .map((track) => track.clone());
+
       const stream = new MediaStream([
-        ...videoStream.getVideoTracks(),
-        ...audioStream.getAudioTracks()
+        videoTrack,
+        ...state.exportAudioTracks
       ]);
 
       state.recordedChunks = [];
-      const options = { mimeType: 'video/webm; codecs=vp9' };
-      state.mediaRecorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : undefined);
+      state.shouldSaveExport = true;
+
+      const preferredMimeType = "video/webm; codecs=vp9";
+      const recorderOptions =
+        typeof MediaRecorder.isTypeSupported === "function" && MediaRecorder.isTypeSupported(preferredMimeType)
+          ? { mimeType: preferredMimeType }
+          : undefined;
+
+      state.mediaRecorder = new MediaRecorder(stream, recorderOptions);
 
       state.mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -657,7 +738,7 @@
         finishExporting();
       };
 
-      videoStream.getVideoTracks()[0].onended = () => {
+      videoTrack.onended = () => {
         if (state.isExporting) stopExporting();
       };
 
@@ -666,15 +747,27 @@
       setRecordingMode(true);
 
       state.mediaRecorder.start(1000);
-      
-      await elements.audio.play();
+
+      try {
+        await elements.audio.play();
+      } catch (error) {
+        console.error("Audio playback failed during export:", error);
+        stopExporting(false);
+        return;
+      }
+
       elements.audio.addEventListener("ended", stopExporting, { once: true });
 
     } catch (err) {
       console.error("Recording failed or rejected:", err);
-      state.isExporting = false;
-      document.body.classList.remove("is-exporting");
-      setRecordingMode(false);
+      stopExporting(false);
+      if (err?.message === "EXPORT_UNSUPPORTED") {
+        alert(TEXT.exportUnsupported);
+        return;
+      }
+      if (!["AbortError", "NotAllowedError"].includes(err?.name)) {
+        alert(TEXT.exportStartFailed);
+      }
     }
   };
 
