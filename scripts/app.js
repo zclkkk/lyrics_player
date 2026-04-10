@@ -72,7 +72,13 @@
     currentIndex: 0,
     recordingMode: false,
     panelHidden: false,
-    objectUrls: []
+    objectUrls: [],
+    isExporting: false,
+    mediaRecorder: null,
+    recordedChunks: [],
+    audioContext: null,
+    audioDestination: null,
+    audioSource: null
   };
 
   const $ = (id) => document.getElementById(id);
@@ -80,6 +86,8 @@
   const elements = {
     app: $("app"),
     audio: $("audio"),
+    exportVideoBtn: $("exportVideoBtn"),
+    recordingBadge: $("recordingBadge"),
     cover: $("cover"),
     title: $("title"),
     artist: $("artist"),
@@ -529,6 +537,110 @@
     }
   };
 
+  const stopExporting = () => {
+    if (!state.isExporting) return;
+    state.isExporting = false;
+    document.body.classList.remove("is-exporting");
+    setRecordingMode(false);
+    elements.audio.pause();
+
+    if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
+      state.mediaRecorder.stop();
+    }
+    
+    if (state.mediaRecorder && state.mediaRecorder.stream) {
+      state.mediaRecorder.stream.getTracks().forEach(track => track.stop());
+    }
+    
+    elements.audio.removeEventListener("ended", stopExporting);
+  };
+
+  const finishExporting = () => {
+    const blob = new Blob(state.recordedChunks, {
+      type: state.recordedChunks[0]?.type || 'video/webm'
+    });
+    const url = URL.createObjectURL(blob);
+    state.objectUrls.push(url);
+
+    const a = document.createElement("a");
+    a.style.display = "none";
+    a.href = url;
+    a.download = `${state.title || "export"}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      document.body.removeChild(a);
+    }, 100);
+  };
+
+  const startExporting = async () => {
+    if (!elements.audio.src) {
+      alert("请先导入音频！");
+      return;
+    }
+
+    try {
+      const videoStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { displaySurface: "browser" },
+        audio: false
+      });
+
+      elements.audio.pause();
+      elements.audio.currentTime = 0;
+
+      if (!state.audioContext) {
+        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
+        state.audioDestination = state.audioContext.createMediaStreamDestination();
+        state.audioSource.connect(state.audioDestination);
+        state.audioSource.connect(state.audioContext.destination);
+      }
+
+      if (state.audioContext.state === 'suspended') {
+        await state.audioContext.resume();
+      }
+
+      const audioStream = state.audioDestination.stream;
+      const stream = new MediaStream([
+        ...videoStream.getVideoTracks(),
+        ...audioStream.getAudioTracks()
+      ]);
+
+      state.recordedChunks = [];
+      const options = { mimeType: 'video/webm; codecs=vp9' };
+      state.mediaRecorder = new MediaRecorder(stream, MediaRecorder.isTypeSupported(options.mimeType) ? options : undefined);
+
+      state.mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          state.recordedChunks.push(event.data);
+        }
+      };
+
+      state.mediaRecorder.onstop = () => {
+        finishExporting();
+      };
+
+      videoStream.getVideoTracks()[0].onended = () => {
+        if (state.isExporting) stopExporting();
+      };
+
+      state.isExporting = true;
+      document.body.classList.add("is-exporting");
+      setRecordingMode(true);
+
+      state.mediaRecorder.start(1000);
+      
+      await elements.audio.play();
+      elements.audio.addEventListener("ended", stopExporting, { once: true });
+
+    } catch (err) {
+      console.error("Recording failed or rejected:", err);
+      state.isExporting = false;
+      document.body.classList.remove("is-exporting");
+      setRecordingMode(false);
+    }
+  };
+
   const togglePlayback = async () => {
     if (!elements.audio.src) {
       return;
@@ -560,6 +672,7 @@
 
     elements.playBtn.addEventListener("click", togglePlayback);
     elements.recalcColorBtn.addEventListener("click", recalcCoverColor);
+    elements.exportVideoBtn.addEventListener("click", startExporting);
     elements.togglePanelBtn.addEventListener("click", () => setPanelHidden(!state.panelHidden));
     elements.toggleRecordingBtn.addEventListener("click", () => setRecordingMode(!state.recordingMode));
     elements.loadDemoBtn.addEventListener("click", loadDemo);
