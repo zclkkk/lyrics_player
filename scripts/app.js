@@ -582,7 +582,9 @@
     try {
       const videoStream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: "browser" },
-        audio: false
+        audio: false,
+        preferCurrentTab: true,
+        selfBrowserSurface: "include"
       });
 
       elements.audio.pause();
