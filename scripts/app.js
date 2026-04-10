@@ -32,6 +32,7 @@
     exportMuxingHint: "正在把录制画面与原始音频封装到同一个 MKV 文件中。",
     exportDoneHint: "导出完成，已下载包含原始音频的 MKV 文件。",
     exportCancelledHint: "已取消导出。",
+    exportEmptyCaptureHint: "录制结束过快，未捕获到任何画面，请重试。",
     exportFallbackHint: "原音频封装失败，已回退下载纯画面录制文件。",
     exportRequiresAudio: "请先导入音频文件！",
     exportRequiresOriginalAudio: "请通过文件选择或拖拽导入原始音频后再导出，这样才能保留原音频。",
@@ -545,39 +546,42 @@
       setExportStatus(TEXT.exportPreparingHint);
 
       state.ffmpegLoadPromise = (async () => {
-        const [coreURL, wasmURL] = await Promise.all([
-          createBlobUrlFromRemote(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-          createBlobUrlFromRemote(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
-        ]);
+        let ffmpeg = null;
 
-        state.ffmpegAssetUrls = [coreURL, wasmURL];
+        try {
+          const [coreURL, wasmURL] = await Promise.all([
+            createBlobUrlFromRemote(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
+            createBlobUrlFromRemote(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
+          ]);
 
-        const ffmpeg = new FFmpeg();
-        ffmpeg.on("progress", ({ progress }) => {
-          if (!state.isMuxing) {
-            return;
+          state.ffmpegAssetUrls = [coreURL, wasmURL];
+
+          ffmpeg = new FFmpeg();
+          ffmpeg.on("progress", ({ progress }) => {
+            if (!state.isMuxing) {
+              return;
+            }
+
+            const percent = Math.max(1, Math.min(99, Math.round((progress || 0) * 100)));
+            setExportStatus(`正在把录制画面与原始音频封装到 MKV… ${percent}%`);
+          });
+
+          await ffmpeg.load({
+            coreURL,
+            wasmURL
+          });
+
+          state.ffmpeg = ffmpeg;
+          return ffmpeg;
+        } catch (error) {
+          if (ffmpeg) {
+            ffmpeg.terminate();
           }
-
-          const percent = Math.max(1, Math.min(99, Math.round((progress || 0) * 100)));
-          setExportStatus(`正在把录制画面与原始音频封装到 MKV… ${percent}%`);
-        });
-
-        await ffmpeg.load({
-          coreURL,
-          wasmURL
-        });
-
-        state.ffmpeg = ffmpeg;
-        return ffmpeg;
-      })()
-        .catch((error) => {
-          if (state.ffmpeg) {
-            state.ffmpeg.terminate();
-            state.ffmpeg = null;
-          }
+          state.ffmpeg = null;
           revokeFfmpegAssetUrls();
           throw error;
-        })
+        }
+      })()
         .finally(() => {
           state.ffmpegLoadPromise = null;
           updateExportUi();
@@ -859,11 +863,14 @@
   };
 
   const finalizeRecordedVideo = async () => {
-    const shouldSave = state.shouldSaveExport && state.recordedChunks.length > 0;
+    const requestedSave = state.shouldSaveExport;
+    const hasRecordedChunks = state.recordedChunks.length > 0;
+    const shouldSave = requestedSave && hasRecordedChunks;
     const recordingMimeType = state.recordingMimeType || state.recordedChunks[0]?.type || "video/webm";
 
     if (!shouldSave) {
       state.isMuxing = false;
+      setExportStatus(requestedSave ? TEXT.exportEmptyCaptureHint : TEXT.exportCancelledHint);
       updateExportUi();
       resetExportSession();
       return;
