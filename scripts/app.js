@@ -73,6 +73,7 @@
     recordingMode: false,
     panelHidden: false,
     objectUrls: [],
+    lastExportUrl: null,
     isExporting: false,
     mediaRecorder: null,
     recordedChunks: [],
@@ -557,7 +558,10 @@
       type: state.recordedChunks[0]?.type || 'video/webm'
     });
     const url = URL.createObjectURL(blob);
-    state.objectUrls.push(url);
+    if (state.lastExportUrl) {
+      URL.revokeObjectURL(state.lastExportUrl);
+    }
+    state.lastExportUrl = url;
 
     const a = document.createElement("a");
     a.style.display = "none";
@@ -576,6 +580,18 @@
       return;
     }
 
+    if (!state.audioContext) {
+      state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
+      state.audioDestination = state.audioContext.createMediaStreamDestination();
+      state.audioSource.connect(state.audioDestination);
+      state.audioSource.connect(state.audioContext.destination);
+    }
+
+    if (state.audioContext.state === 'suspended') {
+      await state.audioContext.resume();
+    }
+
     try {
       const videoStream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: "browser" },
@@ -586,18 +602,6 @@
 
       elements.audio.pause();
       elements.audio.currentTime = 0;
-
-      if (!state.audioContext) {
-        state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        state.audioSource = state.audioContext.createMediaElementSource(elements.audio);
-        state.audioDestination = state.audioContext.createMediaStreamDestination();
-        state.audioSource.connect(state.audioDestination);
-        state.audioSource.connect(state.audioContext.destination);
-      }
-
-      if (state.audioContext.state === 'suspended') {
-        await state.audioContext.resume();
-      }
 
       const audioStream = state.audioDestination.stream;
       const stream = new MediaStream([
