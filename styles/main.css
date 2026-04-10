@@ -361,6 +361,11 @@ select {
   touch-action: none;
 }
 
+.progress:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .progress::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 999px;

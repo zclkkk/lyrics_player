@@ -28,6 +28,7 @@
     exportMuxingButton: "正在封装原音频…",
     exportIdleHint: "首次导出会联网加载 FFmpeg 内核（约 31 MB）；如果你是直接双击打开 index.html，请改用任意本地 HTTP 服务打开后再导出。",
     exportPreparingHint: "正在联网加载 FFmpeg 内核，首次可能需要几十秒，请稍候。",
+    exportPickTabHint: "请在浏览器弹窗中选择当前标签页，确认后开始录制。",
     exportRecordingHint: "正在录制画面；录制结束后会自动把你导入的原始音频封装进 MKV。",
     exportMuxingHint: "正在把录制画面与原始音频封装到同一个 MKV 文件中。",
     exportDoneHint: "导出完成，已下载包含原始音频的 MKV 文件。",
@@ -535,6 +536,10 @@
   };
 
   const seekByProgressValue = (rawValue) => {
+    if (isPlaybackInteractionLocked()) {
+      return;
+    }
+
     const max = Number(elements.progress.max) || 1000;
     const ratio = Math.min(1, Math.max(0, Number(rawValue) / max));
 
@@ -584,7 +589,13 @@
     elements.exportStatus.textContent = text;
   };
 
+  const isPlaybackInteractionLocked = () => state.isExporting;
+
   const updateExportUi = () => {
+    const playbackInteractionLocked = isPlaybackInteractionLocked();
+    elements.playBtn.disabled = playbackInteractionLocked;
+    elements.progress.disabled = playbackInteractionLocked;
+
     if (state.isExporting) {
       elements.exportVideoBtn.disabled = false;
       elements.exportVideoBtn.textContent = TEXT.exportStopButton;
@@ -1039,7 +1050,7 @@
 
     try {
       await ensureFfmpeg();
-      setExportStatus(TEXT.exportPreparingHint);
+      setExportStatus(TEXT.exportPickTabHint);
 
       const videoStream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: "browser" },
@@ -1154,7 +1165,7 @@
   };
 
   const togglePlayback = async () => {
-    if (!elements.audio.src) {
+    if (!elements.audio.src || isPlaybackInteractionLocked()) {
       return;
     }
 
@@ -1198,7 +1209,6 @@
       stopPlaybackSyncLoop();
       updateProgress();
     });
-    elements.audio.addEventListener("timeupdate", updateProgress);
     elements.audio.addEventListener("loadedmetadata", updateProgress);
     elements.audio.addEventListener("ended", () => {
       stopPlaybackSyncLoop();
@@ -1216,6 +1226,9 @@
 
       if (event.code === "Space") {
         if (event.target && ["BUTTON", "SELECT"].includes(event.target.tagName)) {
+          return;
+        }
+        if (isPlaybackInteractionLocked()) {
           return;
         }
         event.preventDefault();
@@ -1260,6 +1273,9 @@
       }
 
       if (event.key === "ArrowRight") {
+        if (isPlaybackInteractionLocked()) {
+          return;
+        }
         elements.audio.currentTime = Math.min(
           elements.audio.duration || 0,
           (elements.audio.currentTime || 0) + 5
@@ -1269,6 +1285,9 @@
       }
 
       if (event.key === "ArrowLeft") {
+        if (isPlaybackInteractionLocked()) {
+          return;
+        }
         elements.audio.currentTime = Math.max(0, (elements.audio.currentTime || 0) - 5);
         updateProgress();
       }
