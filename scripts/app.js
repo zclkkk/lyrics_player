@@ -460,6 +460,40 @@
 
   };
 
+  const handleDrop = (event) => {
+    event.preventDefault();
+    document.body.classList.remove("drag-over");
+    if (state.isExporting) return;
+
+    const files = Array.from(event.dataTransfer?.files || []);
+
+    for (const file of files) {
+      if (file.type.startsWith("image/")) {
+        setCover(URL.createObjectURL(file));
+      } else if (file.type.startsWith("audio/")) {
+        setAudio(URL.createObjectURL(file));
+      } else if (file.name.endsWith(".lrc") || file.type === "text/plain") {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target.result;
+          elements.lrcInput.value = text;
+          state.lyrics = parseLrc(text);
+          renderLyrics();
+        };
+        reader.readAsText(file);
+      }
+    }
+
+    if (!files.length) {
+      const text = event.dataTransfer?.getData("text/plain");
+      if (text) {
+        elements.lrcInput.value = text;
+        state.lyrics = parseLrc(text);
+        renderLyrics();
+      }
+    }
+  };
+
   const handleTitleInput = (event) => {
     state.title = event.target.value.trim() || TEXT.untitledSong;
     syncTextInputs();
@@ -736,6 +770,18 @@
         updateProgress();
       }
     });
+
+    window.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      document.body.classList.add("drag-over");
+    });
+    window.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      if (!e.relatedTarget || (e.clientX === 0 && e.clientY === 0)) {
+        document.body.classList.remove("drag-over");
+      }
+    });
+    window.addEventListener("drop", handleDrop);
 
     window.addEventListener("beforeunload", revokeObjectUrls);
   };
