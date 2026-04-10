@@ -536,6 +536,13 @@ select {
   gap: 7px;
 }
 
+.field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .field label {
   color: rgba(255, 255, 255, 0.55);
   font-size: 12px;
@@ -565,6 +572,42 @@ select {
 
 .field input[type="range"] {
   accent-color: rgb(var(--accent-rgb));
+}
+
+.calibration-card {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.calibration-slider {
+  gap: 8px;
+}
+
+.value-pill {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.calibration-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.calibration-actions .mini-btn {
+  width: 100%;
+  min-height: 40px;
+  line-height: 1.35;
+}
+
+.calibration-status {
+  min-height: 2.9em;
 }
 
 .hint {

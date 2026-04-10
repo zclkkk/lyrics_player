@@ -16,6 +16,14 @@
     audioPicker: "选择音频文件",
     lrcLabel: "LRC 歌词",
     lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
+    lrcCalibrationLabel: "歌词校准",
+    lrcCalibrationHint: "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。",
+    lrcOffsetLabel: "整体偏移",
+    lrcNudgeBack: "整体 -100 ms",
+    lrcNudgeForward: "整体 +100 ms",
+    lrcAlignCurrent: "从当前句起对齐",
+    lrcReset: "重置校准",
+    lrcCalibrationEmpty: "当前 LRC 没有可校准的时间标签。",
     fontScaleLabel: "歌词字号",
     coverScaleLabel: "封面尺寸",
     bgDarknessLabel: "背景深浅",
@@ -92,6 +100,8 @@
     audioUrl: "",
     audioFile: null,
     lyrics: [],
+    originalLyrics: [],
+    lyricsGlobalOffsetMs: 0,
     currentIndex: -1,
     recordingMode: false,
     panelHidden: false,
@@ -150,6 +160,16 @@
     audioLabel: $("audioLabel"),
     audioPickerLabel: $("audioPickerLabel"),
     lrcLabel: $("lrcLabel"),
+    lrcCalibrationLabel: $("lrcCalibrationLabel"),
+    lrcCalibrationHint: $("lrcCalibrationHint"),
+    lrcOffsetLabel: $("lrcOffsetLabel"),
+    lrcOffsetInput: $("lrcOffsetInput"),
+    lrcOffsetValue: $("lrcOffsetValue"),
+    nudgeLrcBackBtn: $("nudgeLrcBackBtn"),
+    nudgeLrcForwardBtn: $("nudgeLrcForwardBtn"),
+    alignCurrentLyricBtn: $("alignCurrentLyricBtn"),
+    resetLrcCalibrationBtn: $("resetLrcCalibrationBtn"),
+    lrcCalibrationStatus: $("lrcCalibrationStatus"),
     fontScaleLabel: $("fontScaleLabel"),
     coverScaleLabel: $("coverScaleLabel"),
     bgDarknessInput: $("bgDarknessInput"),
@@ -179,6 +199,13 @@
     elements.audioPickerLabel.textContent = TEXT.audioPicker;
     elements.lrcLabel.textContent = TEXT.lrcLabel;
     elements.lrcInput.placeholder = TEXT.lrcPlaceholder;
+    elements.lrcCalibrationLabel.textContent = TEXT.lrcCalibrationLabel;
+    elements.lrcCalibrationHint.textContent = TEXT.lrcCalibrationHint;
+    elements.lrcOffsetLabel.textContent = TEXT.lrcOffsetLabel;
+    elements.nudgeLrcBackBtn.textContent = TEXT.lrcNudgeBack;
+    elements.nudgeLrcForwardBtn.textContent = TEXT.lrcNudgeForward;
+    elements.alignCurrentLyricBtn.textContent = TEXT.lrcAlignCurrent;
+    elements.resetLrcCalibrationBtn.textContent = TEXT.lrcReset;
     elements.fontScaleLabel.textContent = TEXT.fontScaleLabel;
     elements.coverScaleLabel.textContent = TEXT.coverScaleLabel;
     elements.bgDarknessLabel.textContent = TEXT.bgDarknessLabel;
@@ -261,6 +288,188 @@
     return lines;
   };
 
+  const cloneLyrics = (lyrics) => lyrics.map((line) => ({ ...line }));
+
+  const applyLyricsData = (lyrics) => {
+    state.originalLyrics = cloneLyrics(lyrics);
+    state.lyrics = cloneLyrics(lyrics);
+    state.lyricsGlobalOffsetMs = 0;
+    state.currentIndex = -1;
+  };
+
+  const applyLyricsText = (text) => {
+    applyLyricsData(parseLrc(text));
+    renderLyrics();
+    updateProgress();
+    updateLyricCalibrationUi();
+  };
+
+  const getLyricsOffsetSeconds = () => state.lyricsGlobalOffsetMs / 1000;
+
+  const getEffectiveLyricTime = (time) => (
+    Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time
+  );
+
+  const hasCalibratableLyrics = () => state.lyrics.some((line) => Number.isFinite(line.time));
+
+  const formatSignedMilliseconds = (milliseconds) => {
+    const rounded = Math.round(milliseconds);
+    return `${rounded > 0 ? "+" : ""}${rounded} ms`;
+  };
+
+  const formatLrcTimestamp = (seconds) => {
+    if (!Number.isFinite(seconds)) {
+      return "--:--.--";
+    }
+
+    const totalMilliseconds = Math.max(0, Math.round(seconds * 1000));
+    const minutes = Math.floor(totalMilliseconds / 60000);
+    const remainingMilliseconds = totalMilliseconds % 60000;
+    const wholeSeconds = Math.floor(remainingMilliseconds / 1000);
+    const centiseconds = Math.floor((remainingMilliseconds % 1000) / 10);
+
+    return `${String(minutes).padStart(2, "0")}:${String(wholeSeconds).padStart(2, "0")}.${String(centiseconds).padStart(2, "0")}`;
+  };
+
+  const getLyricPreview = (text) => {
+    const trimmed = String(text || "").trim() || "（空行）";
+    return trimmed.length > 18 ? `${trimmed.slice(0, 18)}…` : trimmed;
+  };
+
+  const getCalibrationAnchorIndex = () => {
+    if (!hasCalibratableLyrics()) {
+      return -1;
+    }
+
+    if (state.currentIndex >= 0) {
+      const currentLine = state.lyrics[state.currentIndex];
+      if (currentLine && Number.isFinite(currentLine.time)) {
+        return state.currentIndex;
+      }
+    }
+
+    const currentTime = elements.audio.currentTime || 0;
+
+    for (let index = 0; index < state.lyrics.length; index += 1) {
+      const line = state.lyrics[index];
+      if (!Number.isFinite(line.time)) {
+        continue;
+      }
+      if (getEffectiveLyricTime(line.time) >= currentTime) {
+        return index;
+      }
+    }
+
+    for (let index = state.lyrics.length - 1; index >= 0; index -= 1) {
+      if (Number.isFinite(state.lyrics[index].time)) {
+        return index;
+      }
+    }
+
+    return -1;
+  };
+
+  const isLyricCalibrationLocked = () =>
+    state.isExporting || state.isMuxing || Boolean(state.ffmpegLoadPromise);
+
+  const updateLyricCalibrationUi = () => {
+    const hasTimedLyrics = hasCalibratableLyrics();
+    const anchorIndex = getCalibrationAnchorIndex();
+    const anchorLine = anchorIndex >= 0 ? state.lyrics[anchorIndex] : null;
+    const calibrationLocked = isLyricCalibrationLocked();
+
+    elements.lrcOffsetInput.disabled = !hasTimedLyrics || calibrationLocked;
+    elements.nudgeLrcBackBtn.disabled = !hasTimedLyrics || calibrationLocked;
+    elements.nudgeLrcForwardBtn.disabled = !hasTimedLyrics || calibrationLocked;
+    elements.alignCurrentLyricBtn.disabled = !anchorLine || calibrationLocked;
+    elements.resetLrcCalibrationBtn.disabled = !hasTimedLyrics || calibrationLocked;
+
+    elements.lrcOffsetInput.value = String(state.lyricsGlobalOffsetMs);
+    elements.lrcOffsetValue.textContent = formatSignedMilliseconds(state.lyricsGlobalOffsetMs);
+
+    if (!hasTimedLyrics) {
+      elements.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
+      return;
+    }
+
+    if (!anchorLine) {
+      elements.lrcCalibrationStatus.textContent = `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 先播放到要校准的那一句。`;
+      return;
+    }
+
+    elements.lrcCalibrationStatus.textContent = `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 对齐句：${getLyricPreview(anchorLine.text)} · 时间 ${formatLrcTimestamp(getEffectiveLyricTime(anchorLine.time))}`;
+  };
+
+  const setLyricsGlobalOffset = (nextOffsetMs) => {
+    const clamped = Math.max(-5000, Math.min(5000, Math.round(Number(nextOffsetMs) || 0)));
+    state.lyricsGlobalOffsetMs = clamped;
+    updateProgress();
+    updateLyricCalibrationUi();
+  };
+
+  const shiftLyricsFromIndex = (startIndex, deltaSeconds) => {
+    const anchorLine = state.lyrics[startIndex];
+
+    if (!anchorLine || !Number.isFinite(anchorLine.time) || !Number.isFinite(deltaSeconds)) {
+      return;
+    }
+
+    let appliedDelta = deltaSeconds;
+    let minimumDelta = -anchorLine.time;
+
+    for (let index = startIndex - 1; index >= 0; index -= 1) {
+      const previousLine = state.lyrics[index];
+      if (!Number.isFinite(previousLine.time)) {
+        continue;
+      }
+      minimumDelta = Math.max(minimumDelta, previousLine.time - anchorLine.time + 0.01);
+      break;
+    }
+
+    appliedDelta = Math.max(appliedDelta, minimumDelta);
+
+    if (Math.abs(appliedDelta) < 0.0005) {
+      return;
+    }
+
+    state.lyrics = state.lyrics.map((line, index) => {
+      if (index < startIndex || !Number.isFinite(line.time)) {
+        return line;
+      }
+
+      return {
+        ...line,
+        time: Math.max(0, line.time + appliedDelta)
+      };
+    });
+
+    updateProgress();
+    updateLyricCalibrationUi();
+  };
+
+  const alignLyricsFromCurrentLine = () => {
+    const anchorIndex = getCalibrationAnchorIndex();
+
+    if (anchorIndex < 0) {
+      return;
+    }
+
+    const anchorLine = state.lyrics[anchorIndex];
+    const currentTime = elements.audio.currentTime || 0;
+    const displayedTime = getEffectiveLyricTime(anchorLine.time);
+
+    shiftLyricsFromIndex(anchorIndex, currentTime - displayedTime);
+  };
+
+  const resetLyricsCalibration = () => {
+    state.lyrics = cloneLyrics(state.originalLyrics);
+    state.lyricsGlobalOffsetMs = 0;
+    state.currentIndex = -1;
+    renderLyrics();
+    updateProgress();
+    updateLyricCalibrationUi();
+  };
+
   const renderLyrics = () => {
     elements.lyricsTrack.innerHTML = "";
 
@@ -276,6 +485,7 @@
     });
 
     updateLyrics(true);
+    updateLyricCalibrationUi();
 
   };
 
@@ -404,7 +614,7 @@
     const currentTime = elements.audio.currentTime || 0;
 
     for (let index = 0; index < state.lyrics.length; index += 1) {
-      if (state.lyrics[index].time <= currentTime) {
+      if (getEffectiveLyricTime(state.lyrics[index].time) <= currentTime) {
         activeIndex = index;
       } else {
         break;
@@ -430,6 +640,8 @@
 
       elements.app.style.setProperty("--lyrics-offset", `${targetOffset}px`);
     }
+
+    updateLyricCalibrationUi();
   };
 
   const updateProgress = () => {
@@ -600,23 +812,27 @@
     if (state.isExporting) {
       elements.exportVideoBtn.disabled = false;
       elements.exportVideoBtn.textContent = TEXT.exportStopButton;
+      updateLyricCalibrationUi();
       return;
     }
 
     if (state.ffmpegLoadPromise) {
       elements.exportVideoBtn.disabled = true;
       elements.exportVideoBtn.textContent = TEXT.exportPreparingButton;
+      updateLyricCalibrationUi();
       return;
     }
 
     if (state.isMuxing) {
       elements.exportVideoBtn.disabled = true;
       elements.exportVideoBtn.textContent = TEXT.exportMuxingButton;
+      updateLyricCalibrationUi();
       return;
     }
 
     elements.exportVideoBtn.disabled = false;
     elements.exportVideoBtn.textContent = TEXT.exportButton;
+    updateLyricCalibrationUi();
   };
 
   const getSupportedRecordingMimeType = () => {
@@ -811,11 +1027,9 @@
   const loadDemo = () => {
     state.title = demo.title;
     state.artist = demo.artist;
-    state.lyrics = parseLrc(demo.lrc);
-
     elements.lrcInput.value = demo.lrc;
     syncTextInputs();
-    renderLyrics();
+    applyLyricsText(demo.lrc);
 
     const svg = encodeURIComponent(`
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
@@ -860,8 +1074,7 @@
         reader.onload = (e) => {
           const text = e.target.result;
           elements.lrcInput.value = text;
-          state.lyrics = parseLrc(text);
-          renderLyrics();
+          applyLyricsText(text);
         };
         reader.readAsText(file);
       }
@@ -871,8 +1084,7 @@
       const text = event.dataTransfer?.getData("text/plain");
       if (text) {
         elements.lrcInput.value = text;
-        state.lyrics = parseLrc(text);
-        renderLyrics();
+        applyLyricsText(text);
       }
     }
   };
@@ -888,8 +1100,7 @@
   };
 
   const handleLyricsInput = (event) => {
-    state.lyrics = parseLrc(event.target.value);
-    renderLyrics();
+    applyLyricsText(event.target.value);
   };
 
   const handleCoverUpload = (event) => {
@@ -951,6 +1162,14 @@
     if (bgElement) {
       bgElement.classList.toggle("animate", event.target.checked);
     }
+  };
+
+  const handleLyricsOffsetInput = (event) => {
+    setLyricsGlobalOffset(event.target.value);
+  };
+
+  const handleLyricsNudge = (deltaMs) => {
+    setLyricsGlobalOffset(state.lyricsGlobalOffsetMs + deltaMs);
   };
 
   const stopExporting = (shouldSave = true) => {
@@ -1196,6 +1415,11 @@
     elements.bgDarknessInput.addEventListener("input", handleBgDarkness);
     elements.bgBlurInput.addEventListener("input", handleBgBlur);
     elements.bgAnimateInput.addEventListener("change", handleBgAnimate);
+    elements.lrcOffsetInput.addEventListener("input", handleLyricsOffsetInput);
+    elements.nudgeLrcBackBtn.addEventListener("click", () => handleLyricsNudge(-100));
+    elements.nudgeLrcForwardBtn.addEventListener("click", () => handleLyricsNudge(100));
+    elements.alignCurrentLyricBtn.addEventListener("click", alignLyricsFromCurrentLine);
+    elements.resetLrcCalibrationBtn.addEventListener("click", resetLyricsCalibration);
 
     elements.playBtn.addEventListener("click", togglePlayback);
     elements.exportVideoBtn.addEventListener("click", handleExportButtonClick);
@@ -1325,7 +1549,7 @@
 
   const init = () => {
     applyStaticText();
-    state.lyrics = parseLrc("");
+    applyLyricsData([]);
     syncTextInputs();
     bindEvents();
     handleFontScale({ target: elements.fontScaleInput });
@@ -1336,6 +1560,7 @@
     loadDemo();
     updateExportUi();
     updateProgress();
+    updateLyricCalibrationUi();
   };
 
   init();
