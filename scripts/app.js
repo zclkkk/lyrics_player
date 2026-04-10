@@ -104,6 +104,7 @@
     displayStream: null,
     shouldSaveExport: false,
     recordingMimeType: "",
+    exportBaseName: "",
     exportAudioLeadInMs: 0,
     pendingPlaybackStartCancel: null,
     playbackSyncFrame: 0,
@@ -709,6 +710,7 @@
     state.recordedChunks = [];
     state.shouldSaveExport = false;
     state.recordingMimeType = "";
+    state.exportBaseName = "";
     state.exportAudioLeadInMs = 0;
   };
 
@@ -992,6 +994,7 @@
     const recordedBlob = new Blob(state.recordedChunks, {
       type: recordingMimeType
     });
+    const exportBaseName = state.exportBaseName || getSafeExportBaseName();
     const audioFile = state.audioFile;
     const audioLeadInMs = state.exportAudioLeadInMs;
     resetExportSession();
@@ -999,11 +1002,11 @@
 
     try {
       const muxedBlob = await muxRecordedVideo(recordedBlob, audioFile, audioLeadInMs);
-      downloadBlob(muxedBlob, `${getSafeExportBaseName()}.mkv`);
+      downloadBlob(muxedBlob, `${exportBaseName}.mkv`);
       setExportStatus(TEXT.exportDoneHint);
     } catch (error) {
       console.error("Muxing failed, falling back to raw capture:", error);
-      downloadBlob(recordedBlob, `${getSafeExportBaseName()}-capture.webm`);
+      downloadBlob(recordedBlob, `${exportBaseName}-capture.webm`);
       alert(error?.message === "EXPORT_AUDIO_FILE_MISSING" ? TEXT.exportRequiresOriginalAudio : TEXT.exportMuxFailed);
       setExportStatus(TEXT.exportFallbackHint);
     } finally {
@@ -1097,6 +1100,7 @@
       state.isExporting = true;
       document.body.classList.add("is-exporting");
       setRecordingMode(true);
+      state.exportBaseName = getSafeExportBaseName();
       updateExportUi();
       setExportStatus(TEXT.exportRecordingHint);
 
