@@ -88,7 +88,6 @@
     app: $("app"),
     audio: $("audio"),
     exportVideoBtn: $("exportVideoBtn"),
-    recordingBadge: $("recordingBadge"),
     cover: $("cover"),
     title: $("title"),
     artist: $("artist"),
