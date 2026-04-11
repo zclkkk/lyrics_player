@@ -1242,10 +1242,8 @@ const startExporting = async () => {
       setExportStatus(TEXT.exportEngineFailed);
       return;
     }
-    if (!["AbortError", "NotAllowedError"].includes(err?.name)) {
-      alert(TEXT.exportStartFailed);
-      setExportStatus(TEXT.exportStartFailed);
-    }
+    alert(TEXT.exportStartFailed);
+    setExportStatus(TEXT.exportStartFailed);
   }
 };
 
@@ -1418,7 +1416,6 @@ const init = () => {
   handleCoverScale({ target: elements.coverScaleInput });
   handleBgDarkness({ target: elements.bgDarknessInput });
   handleBgBlur({ target: elements.bgBlurInput });
-  renderLyrics();
   loadDemo();
   updateExportUi();
   updateProgress();
