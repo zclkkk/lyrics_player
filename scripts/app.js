@@ -1,5 +1,5 @@
 import { debounce, formatTime, formatSignedMilliseconds, formatLrcTimestamp, getLyricPreview, getFileExtension } from './utils.js';
-import { parseLrc, cloneLyrics } from './lrc.js';
+import { parseLrc } from './lrc.js';
 import { getDominantColors, applyAccent } from './color.js';
 
 const TEXT = {
@@ -235,8 +235,8 @@ const revokeTrackedObjectUrl = (url) => {
 };
 
 const applyLyricsData = (lyrics) => {
-  state.originalLyrics = cloneLyrics(lyrics);
-  state.lyrics = cloneLyrics(lyrics);
+  state.originalLyrics = structuredClone(lyrics);
+  state.lyrics = structuredClone(lyrics);
   state.lyricsGlobalOffsetMs = 0;
   state.currentIndex = -1;
 };
@@ -382,7 +382,7 @@ const alignLyricsFromCurrentLine = () => {
 };
 
 const resetLyricsCalibration = () => {
-  state.lyrics = cloneLyrics(state.originalLyrics);
+  state.lyrics = structuredClone(state.originalLyrics);
   state.lyricsGlobalOffsetMs = 0;
   state.currentIndex = -1;
   renderLyrics();

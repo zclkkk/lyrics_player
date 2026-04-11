@@ -38,5 +38,3 @@ export const parseLrc = (text) => {
   lines.sort((a, b) => a.time - b.time);
   return lines;
 };
-
-export const cloneLyrics = (lyrics) => lyrics.map((line) => ({ ...line }));
