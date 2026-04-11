@@ -119,7 +119,8 @@
     ffmpeg: null,
     ffmpegLoadPromise: null,
     ffmpegAssetUrls: [],
-    exportJobCount: 0
+    exportJobCount: 0,
+    exportEndedHandler: null
   };
 
   const $ = (id) => document.getElementById(id);
@@ -932,7 +933,10 @@
     setRecordingMode(false);
     clearPendingPlaybackStart();
     elements.audio.pause();
-    elements.audio.removeEventListener("ended", stopExporting);
+    if (state.exportEndedHandler) {
+      elements.audio.removeEventListener("ended", state.exportEndedHandler);
+      state.exportEndedHandler = null;
+    }
     updateExportUi();
   };
 
@@ -1343,7 +1347,8 @@
         return;
       }
 
-      elements.audio.addEventListener("ended", stopExporting, { once: true });
+      state.exportEndedHandler = () => stopExporting();
+      elements.audio.addEventListener("ended", state.exportEndedHandler, { once: true });
 
     } catch (err) {
       console.error("Recording failed or rejected:", err);
