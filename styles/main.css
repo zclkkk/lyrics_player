@@ -37,7 +37,7 @@
 @property --cover-radius {
   syntax: "<length>";
   inherits: true;
-  initial-value: 24px;
+  initial-value: 28px;
 }
 
 :root {
@@ -50,8 +50,13 @@
   --text-soft: rgba(255, 255, 255, 0.72);
   --text-faint: rgba(255, 255, 255, 0.36);
   --shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-pill: 999px;
   --cover-size: 370px;
-  --cover-radius: 24px;
+  --cover-radius: var(--radius-lg);
   --progress: 0%;
   --lyrics-offset: 0px;
   --lyrics-scale: 1;
@@ -439,7 +444,7 @@ select {
   appearance: none;
   height: 8px;
   width: 100%;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   outline: none;
   border: 0;
   background:
@@ -457,7 +462,7 @@ select {
 
   &::-webkit-slider-runnable-track {
     height: 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: transparent;
   }
 
@@ -466,7 +471,7 @@ select {
     width: 14px;
     height: 14px;
     margin-top: -3px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
     border: 0;
@@ -475,7 +480,7 @@ select {
   &::-moz-range-track {
     height: 8px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: transparent;
   }
 
@@ -483,14 +488,14 @@ select {
     width: 14px;
     height: 14px;
     border: 0;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: rgba(255, 255, 255, 0.95);
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   }
 
   &::-moz-range-progress {
     height: 8px;
-    border-radius: 999px;
+    border-radius: var(--radius-pill);
     background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.9), rgba(var(--accent-2-rgb), 0.82));
   }
 
@@ -517,7 +522,7 @@ select {
   margin: 0;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 22px;
+  border-radius: var(--radius-md);
   color: inherit;
   background: rgba(14, 14, 18, 0.72);
   backdrop-filter: blur(24px);
@@ -546,7 +551,7 @@ select {
   }
 
   &::-webkit-scrollbar-thumb {
-    border-radius: 6px;
+    border-radius: var(--radius-xs);
     background: rgba(255, 255, 255, 0.15);
 
     &:hover {
@@ -585,7 +590,7 @@ select {
   gap: 8px;
   padding: 10px 14px;
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   cursor: pointer;
@@ -608,7 +613,7 @@ select {
 .mini-btn {
   padding: 8px 10px;
   font-size: 12px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
 }
 
 .btn.primary {
@@ -648,7 +653,7 @@ select {
   & textarea {
     padding: 12px 13px;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
+    border-radius: var(--radius-sm);
     background: rgba(255, 255, 255, 0.04);
     color: #fff;
     outline: none;
@@ -675,7 +680,7 @@ select {
 .calibration-card {
   padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 16px;
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.025);
 }
 
@@ -685,7 +690,7 @@ select {
 
 .value-pill {
   padding: 4px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
@@ -732,7 +737,7 @@ select {
     width: 18px;
     height: 18px;
     border: 2px solid rgba(255, 255, 255, 0.25);
-    border-radius: 5px;
+    border-radius: var(--radius-xs);
     background: rgba(255, 255, 255, 0.04);
     cursor: pointer;
     transition: all 0.2s ease;
@@ -774,7 +779,7 @@ select {
 .badge {
   padding: 9px 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(10, 10, 14, 0.46);
   color: rgba(255, 255, 255, 0.72);
   font-size: 12px;
