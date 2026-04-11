@@ -73,7 +73,8 @@ body {
   overflow: hidden;
   background: #0b0b0e;
   color: var(--text-main);
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  font-weight: 500;
 }
 
 body {
@@ -302,7 +303,7 @@ select {
   margin: 0;
   font-size: clamp(36px, 3.1vw, 56px);
   line-height: 1.08;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
@@ -311,7 +312,7 @@ select {
   margin-top: 14px;
   color: var(--text-soft);
   font-size: clamp(16px, 1.3vw, 22px);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .right {
@@ -564,7 +565,7 @@ select {
 
 .panel-title {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
@@ -613,7 +614,7 @@ select {
 .btn.primary {
   background: linear-gradient(135deg, rgba(var(--accent-rgb), 0.95), rgba(var(--accent-2-rgb), 0.84));
   color: #1a0e0b;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .grid {
@@ -634,6 +635,7 @@ select {
   & label {
     color: rgba(255, 255, 255, 0.55);
     font-size: 12px;
+    font-weight: 600;
   }
 
   & input[type="text"],
