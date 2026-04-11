@@ -123,7 +123,7 @@ const state = {
   ffmpegLoadPromise: null,
   ffmpegAssetUrls: [],
   exportJobCount: 0,
-  exportEndedHandler: null
+  exportEndedAc: null
 };
 
 const $ = (id) => document.getElementById(id);
@@ -779,9 +779,9 @@ const teardownExportUi = () => {
   setRecordingMode(false);
   clearPendingPlaybackStart();
   elements.audio.pause();
-  if (state.exportEndedHandler) {
-    elements.audio.removeEventListener("ended", state.exportEndedHandler);
-    state.exportEndedHandler = null;
+  if (state.exportEndedAc) {
+    state.exportEndedAc.abort();
+    state.exportEndedAc = null;
   }
   updateExportUi();
 };
@@ -1188,8 +1188,8 @@ const startExporting = async () => {
       return;
     }
 
-    state.exportEndedHandler = () => stopExporting();
-    elements.audio.addEventListener("ended", state.exportEndedHandler, { once: true });
+    state.exportEndedAc = new AbortController();
+    elements.audio.addEventListener("ended", () => stopExporting(), { once: true, signal: state.exportEndedAc.signal });
 
   } catch (err) {
     console.error("Recording failed or rejected:", err);
