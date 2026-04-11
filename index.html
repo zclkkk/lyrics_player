@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
   <title>AppleMusic 风格歌词录制页</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +23,7 @@
       <div class="badge" id="shortcutsBadge">空格 播放 / 暂停 · R 录制模式 · H 隐藏面板</div>
     </div>
 
-    <aside class="controls-panel" id="panel">
+    <dialog class="controls-panel" id="panel" open>
       <div class="panel-head">
         <div class="panel-title" id="panelTitle">录制控制台</div>
         <div class="panel-actions">
@@ -47,12 +48,12 @@
           <div class="field">
             <label for="coverInput" id="coverLabel">封面</label>
             <label class="file-label" for="coverInput" id="coverPickerLabel">选择封面图片</label>
-            <input class="hidden-input" id="coverInput" type="file" accept="image/*" />
+            <input id="coverInput" type="file" accept="image/*" hidden />
           </div>
           <div class="field">
             <label for="audioInput" id="audioLabel">音频</label>
             <label class="file-label" for="audioInput" id="audioPickerLabel">选择音频文件</label>
-            <input class="hidden-input" id="audioInput" type="file" accept="audio/*" />
+            <input id="audioInput" type="file" accept="audio/*" hidden />
           </div>
         </div>
 
@@ -127,7 +128,7 @@
           提示：也可以使用传统工作流，切到录制模式后使用 OBS 直接采集此网页。
         </div>
       </div>
-    </aside>
+    </dialog>
 
     <main class="shell">
       <section class="left">
