@@ -117,7 +117,7 @@ const state = {
   recordingMimeType: "",
   exportBaseName: "",
   exportAudioLeadInMs: 0,
-  pendingPlaybackStartCancel: null,
+  pendingPlaybackStartAc: null,
   playbackSyncFrame: 0,
   ffmpeg: null,
   ffmpegLoadPromise: null,
@@ -546,62 +546,45 @@ const startPlaybackSyncLoop = () => {
 };
 
 const clearPendingPlaybackStart = () => {
-  if (typeof state.pendingPlaybackStartCancel === "function") {
-    state.pendingPlaybackStartCancel();
-    state.pendingPlaybackStartCancel = null;
+  if (state.pendingPlaybackStartAc) {
+    state.pendingPlaybackStartAc.abort();
+    state.pendingPlaybackStartAc = null;
   }
 };
 
 const observeAudioPlaybackStart = (audioElement) => {
-  let finished = false;
-  let fallbackTimer = 0;
-
-  const cleanup = () => {
-    audioElement.removeEventListener("playing", handleStart);
-    audioElement.removeEventListener("timeupdate", handleStart);
-    audioElement.removeEventListener("error", handleError);
-    if (fallbackTimer) {
-      clearTimeout(fallbackTimer);
-      fallbackTimer = 0;
-    }
-  };
-
+  const ac = new AbortController();
+  const { signal } = ac;
   const { promise, resolve: resolvePlayback, reject: rejectPlayback } = Promise.withResolvers();
 
-  const finalize = (callback) => {
-    if (finished) {
-      return;
-    }
+  let settled = false;
 
-    finished = true;
-    cleanup();
+  const finalize = (callback) => {
+    if (settled) return;
+    settled = true;
+    ac.abort();
     callback();
   };
 
-  const handleStart = () => {
-    finalize(() => resolvePlayback(performance.now()));
-  };
+  const handleStart = () => finalize(() => resolvePlayback(performance.now()));
+  const handleError = () => finalize(() => rejectPlayback(audioElement.error || new Error("AUDIO_PLAYBACK_START_FAILED")));
 
-  const handleError = () => {
-    finalize(() => rejectPlayback(audioElement.error || new Error("AUDIO_PLAYBACK_START_FAILED")));
-  };
+  audioElement.addEventListener("playing", handleStart, { signal });
+  audioElement.addEventListener("timeupdate", handleStart, { signal });
+  audioElement.addEventListener("error", handleError, { signal });
 
-  audioElement.addEventListener("playing", handleStart);
-  audioElement.addEventListener("timeupdate", handleStart);
-  audioElement.addEventListener("error", handleError);
-
-  fallbackTimer = window.setTimeout(() => {
-    if (!audioElement.paused) {
-      handleStart();
-    }
+  setTimeout(() => {
+    if (!audioElement.paused) handleStart();
   }, 1200);
 
-  return {
-    promise,
-    cancel: () => {
-      finalize(() => rejectPlayback(new Error("AUDIO_PLAYBACK_START_CANCELLED")));
+  signal.addEventListener("abort", () => {
+    if (!settled) {
+      settled = true;
+      rejectPlayback(new Error("AUDIO_PLAYBACK_START_CANCELLED"));
     }
-  };
+  });
+
+  return { promise, ac };
 };
 
 const seekByProgressValue = (rawValue) => {
@@ -1182,14 +1165,14 @@ const startExporting = async () => {
     setExportStatus(TEXT.exportRecordingHint);
 
     const playbackStartObserver = observeAudioPlaybackStart(elements.audio);
-    state.pendingPlaybackStartCancel = playbackStartObserver.cancel;
+    state.pendingPlaybackStartAc = playbackStartObserver.ac;
     const recordingStartedAt = performance.now();
     state.mediaRecorder.start(1000);
 
     try {
       await elements.audio.play();
       const playbackStartedAt = await playbackStartObserver.promise;
-      state.pendingPlaybackStartCancel = null;
+      state.pendingPlaybackStartAc = null;
       state.exportAudioLeadInMs = Math.max(0, playbackStartedAt - recordingStartedAt);
     } catch (error) {
       clearPendingPlaybackStart();
