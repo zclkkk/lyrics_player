@@ -566,6 +566,8 @@ const observeAudioPlaybackStart = (audioElement) => {
     }
   };
 
+  const { promise, resolve: resolvePlayback, reject: rejectPlayback } = Promise.withResolvers();
+
   const finalize = (callback) => {
     if (finished) {
       return;
@@ -583,14 +585,6 @@ const observeAudioPlaybackStart = (audioElement) => {
   const handleError = () => {
     finalize(() => rejectPlayback(audioElement.error || new Error("AUDIO_PLAYBACK_START_FAILED")));
   };
-
-  let resolvePlayback;
-  let rejectPlayback;
-
-  const promise = new Promise((resolve, reject) => {
-    resolvePlayback = resolve;
-    rejectPlayback = reject;
-  });
 
   audioElement.addEventListener("playing", handleStart);
   audioElement.addEventListener("timeupdate", handleStart);
