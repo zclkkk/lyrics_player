@@ -1,6 +1,6 @@
 (() => {
   const TEXT = {
-    pageTitle: "YesPlayMusic 风格歌词录制页",
+    pageTitle: "AppleMusic 风格歌词录制页",
     panelButton: "面板",
     recordingMode: "录制模式",
     exitRecordingMode: "退出录制模式",
@@ -1046,7 +1046,7 @@
         <circle cx="240" cy="250" r="180" fill="rgba(255,255,255,0.18)" />
         <circle cx="940" cy="900" r="260" fill="rgba(255,255,255,0.12)" />
         <text x="90" y="930" fill="rgba(255,255,255,0.95)" font-size="108" font-family="Arial, sans-serif" font-weight="700">翻唱 Demo</text>
-        <text x="96" y="1020" fill="rgba(255,255,255,0.72)" font-size="44" font-family="Arial, sans-serif">YesPlayMusic 风格歌词页</text>
+        <text x="96" y="1020" fill="rgba(255,255,255,0.72)" font-size="44" font-family="Arial, sans-serif">AppleMusic 风格歌词页</text>
       </svg>
     `);
 
