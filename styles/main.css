@@ -1,3 +1,45 @@
+@property --progress {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+@property --lyrics-offset {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --lyrics-scale {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --bg-darkness {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.72;
+}
+
+@property --bg-blur {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 80px;
+}
+
+@property --cover-size {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 370px;
+}
+
+@property --cover-radius {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 24px;
+}
+
 :root {
   --accent-rgb: 255, 116, 116;
   --accent-2-rgb: 255, 196, 124;
