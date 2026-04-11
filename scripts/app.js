@@ -123,7 +123,8 @@ const state = {
   ffmpegLoadPromise: null,
   ffmpegAssetUrls: [],
   exportJobCount: 0,
-  exportEndedAc: null
+  exportEndedAc: null,
+  lyricLineElements: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -404,6 +405,7 @@ const renderLyrics = () => {
     elements.lyricsTrack.appendChild(lineElement);
   });
 
+  state.lyricLineElements = Array.from(elements.lyricsTrack.children);
   updateLyrics(true);
   updateLyricCalibrationUi();
 
@@ -465,7 +467,7 @@ const setAudio = (url, file = null) => {
 };
 
 const updateLyrics = (force = false) => {
-  const lyricLines = Array.from(elements.lyricsTrack.children);
+  const lyricLines = state.lyricLineElements;
 
   if (!lyricLines.length) {
     return;
