@@ -282,13 +282,6 @@ select {
   width: min(100%, 900px);
   height: 100%;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg,
-      transparent 0%,
-      rgba(0, 0, 0, 0.72) 14%,
-      #000 28%,
-      #000 72%,
-      rgba(0, 0, 0, 0.72) 86%,
-      transparent 100%);
   mask-image: linear-gradient(180deg,
       transparent 0%,
       rgba(0, 0, 0, 0.72) 14%,
@@ -354,7 +347,6 @@ select {
 
 .progress {
   appearance: none;
-  -webkit-appearance: none;
   height: 8px;
   width: 100%;
   border-radius: 999px;
@@ -366,7 +358,6 @@ select {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 0 18px rgba(var(--accent-rgb), 0.12);
   cursor: pointer;
   user-select: none;
-  -webkit-user-select: none;
   touch-action: none;
 
   &:disabled {
@@ -382,7 +373,6 @@ select {
 
   &::-webkit-slider-thumb {
     appearance: none;
-    -webkit-appearance: none;
     width: 14px;
     height: 14px;
     margin-top: -3px;
@@ -638,7 +628,6 @@ select {
 
   & input[type="checkbox"] {
     appearance: none;
-    -webkit-appearance: none;
     width: 18px;
     height: 18px;
     border: 2px solid rgba(255, 255, 255, 0.25);
