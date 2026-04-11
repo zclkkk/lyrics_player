@@ -207,23 +207,6 @@ select {
   font-weight: 500;
 }
 
-.subline {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-top: 18px;
-  color: rgba(255, 255, 255, 0.44);
-  font-size: 14px;
-}
-
-.dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
 .right {
   position: relative;
   display: flex;

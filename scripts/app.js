@@ -56,8 +56,6 @@
     coverAlt: "歌曲封面",
     defaultTitle: "你的翻唱作品",
     defaultArtist: "你的名字 / 原唱信息",
-    sublinePrimary: "翻唱投稿可视化页面",
-    sublineSecondary: "模糊背景 · 自动取色 · 歌词同步",
     emptyStateLine1: "导入音频与 LRC 后开始播放。",
     emptyStateLine2: "如果只想做静态镜头，也可以只导入封面和歌词。",
     untitledSong: "未命名作品",
@@ -179,9 +177,7 @@
     bgBlurLabel: $("bgBlurLabel"),
     bgAnimateInput: $("bgAnimateInput"),
     bgAnimateLabel: $("bgAnimateLabel"),
-    workflowHint: $("workflowHint"),
-    sublinePrimary: $("sublinePrimary"),
-    sublineSecondary: $("sublineSecondary")
+    workflowHint: $("workflowHint")
   };
 
   const applyStaticText = () => {
@@ -217,8 +213,6 @@
     elements.exportStatus.textContent = TEXT.exportIdleHint;
     elements.workflowHint.textContent = TEXT.workflowHint;
     elements.cover.alt = TEXT.coverAlt;
-    elements.sublinePrimary.textContent = TEXT.sublinePrimary;
-    elements.sublineSecondary.textContent = TEXT.sublineSecondary;
 
   };
 
