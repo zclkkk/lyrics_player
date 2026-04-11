@@ -583,7 +583,8 @@
 
     state.coverUrl = url;
     elements.cover.src = url;
-    elements.app.style.setProperty("--bg-image", `url("${url.replace(/"/g, '\\"')}")`);
+    const cssUrl = url.replace(/[\\"'()]/g, (ch) => `\\${ch}`);
+    elements.app.style.setProperty("--bg-image", `url("${cssUrl}")`);
     recalcCoverColor();
   };
 
