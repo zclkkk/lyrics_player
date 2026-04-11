@@ -182,7 +182,6 @@ select {
     radial-gradient(ellipse 60% 55% at 25% 25%, rgb(var(--accent-rgb)), transparent 70%),
     radial-gradient(ellipse 55% 60% at 78% 72%, rgb(var(--accent-2-rgb)), transparent 70%);
   animation: ambientDrift1 25s ease-in-out infinite alternate;
-  will-change: transform;
 
   &::after {
     content: "";
@@ -193,7 +192,6 @@ select {
       radial-gradient(ellipse 50% 55% at 68% 18%, rgb(var(--accent-4-rgb)), transparent 65%),
       radial-gradient(ellipse 55% 50% at 28% 78%, rgb(var(--accent-3-rgb)), transparent 65%);
     animation: ambientDrift2 32s ease-in-out infinite alternate;
-    will-change: transform;
   }
 }
 
@@ -592,6 +590,49 @@ select {
   user-select: none;
   transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
 
+  /* cy */
+
+@keyframes liquid-morph {
+  0% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+  34% { border-radius: 70% 30% 50% 50% / 30% 30% 70% 70%; }
+  67% { border-radius: 100% 60% 60% 100% / 100% 100% 60% 60%; }
+  100% { border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%; }
+}
+
+/* 1. 强制解除原容器的裁切，让外围的液态边框能露出来 */
+.cover-wrap {
+  overflow: visible !important;
+}
+
+/* 2. 把圆角属性转移给图片本身，确保图片依然是圆角矩形 */
+.cover {
+  border-radius: var(--cover-radius);
+  position: relative;
+  z-index: 2;
+}
+
+/* 3. 在图片底层生成一个比封面大 24px 的液态玻璃圈 */
+.cover-wrap::after {
+  content: '';
+  position: absolute;
+  top: -24px;
+  left: -24px;
+  right: -24px;
+  bottom: -24px;
+  z-index: 1; /* 置于图片下方，光晕之上 */
+  
+  /* 毛玻璃与高光边缘质感 */
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  
+  /* 绑定液态呼吸动画，6秒循环 */
+  animation: liquid-morph 6s linear infinite;
+}
+
+  
   &:hover {
     background: rgba(255, 255, 255, 0.13);
     transform: translateY(-1px);
