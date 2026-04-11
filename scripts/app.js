@@ -125,6 +125,14 @@
 
   const $ = (id) => document.getElementById(id);
 
+  const debounce = (fn, ms) => {
+    let timer = 0;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = window.setTimeout(() => fn(...args), ms);
+    };
+  };
+
   const elements = {
     app: $("app"),
     audio: $("audio"),
@@ -1100,9 +1108,9 @@
     syncTextInputs();
   };
 
-  const handleLyricsInput = (event) => {
+  const handleLyricsInput = debounce((event) => {
     applyLyricsText(event.target.value);
-  };
+  }, 300);
 
   const handleCoverUpload = (event) => {
     const file = event.target.files?.[0];
