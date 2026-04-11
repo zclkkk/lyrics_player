@@ -124,7 +124,11 @@ const state = {
   ffmpegAssetUrls: [],
   exportJobCount: 0,
   exportEndedAc: null,
-  lyricLineElements: []
+  lyricLineElements: [],
+  lastProgressPercent: "",
+  lastProgressValue: "",
+  lastTimeText: "",
+  lastDurationText: ""
 };
 
 const $ = (id) => document.getElementById(id);
@@ -514,10 +518,29 @@ const updateProgress = () => {
   const progressRatio = duration > 0 ? currentTime / duration : 0;
   const progressPercent = `${progressRatio * 100}%`;
 
-  elements.app.style.setProperty("--progress", progressPercent);
-  elements.progress.value = String(Math.round(progressRatio * Number(elements.progress.max)));
-  elements.currentTime.textContent = formatTime(currentTime);
-  elements.duration.textContent = formatTime(duration);
+  if (state.lastProgressPercent !== progressPercent) {
+    state.lastProgressPercent = progressPercent;
+    elements.app.style.setProperty("--progress", progressPercent);
+  }
+
+  const progressValue = String(Math.round(progressRatio * Number(elements.progress.max)));
+  if (state.lastProgressValue !== progressValue) {
+    state.lastProgressValue = progressValue;
+    elements.progress.value = progressValue;
+  }
+
+  const timeText = formatTime(currentTime);
+  if (state.lastTimeText !== timeText) {
+    state.lastTimeText = timeText;
+    elements.currentTime.textContent = timeText;
+  }
+
+  const durationText = formatTime(duration);
+  if (state.lastDurationText !== durationText) {
+    state.lastDurationText = durationText;
+    elements.duration.textContent = durationText;
+  }
+
   updateLyrics();
 };
 
