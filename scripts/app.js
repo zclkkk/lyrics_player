@@ -626,7 +626,11 @@ const setRecordingMode = (enabled) => {
 
 const setPanelHidden = (hidden) => {
   state.panelHidden = hidden;
-  elements.panel.classList.toggle("hidden", hidden);
+  if (hidden) {
+    elements.panel.close();
+  } else {
+    elements.panel.show();
+  }
 };
 
 const getFfmpegClass = () => window.FFmpegWASM?.FFmpeg || null;
