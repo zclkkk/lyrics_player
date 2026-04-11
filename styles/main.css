@@ -182,6 +182,7 @@ select {
     radial-gradient(ellipse 60% 55% at 25% 25%, rgb(var(--accent-rgb)), transparent 70%),
     radial-gradient(ellipse 55% 60% at 78% 72%, rgb(var(--accent-2-rgb)), transparent 70%);
   animation: ambientDrift1 25s ease-in-out infinite alternate;
+  will-change: transform;
 
   &::after {
     content: "";
@@ -192,6 +193,7 @@ select {
       radial-gradient(ellipse 50% 55% at 68% 18%, rgb(var(--accent-4-rgb)), transparent 65%),
       radial-gradient(ellipse 55% 50% at 28% 78%, rgb(var(--accent-3-rgb)), transparent 65%);
     animation: ambientDrift2 32s ease-in-out infinite alternate;
+    will-change: transform;
   }
 }
 
