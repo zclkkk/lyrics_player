@@ -430,8 +430,8 @@ const recalcCoverColor = () => {
 
   probeImage.onload = () => {
     try {
-      const { base, bright } = getDominantColors(probeImage);
-      applyAccent(base, bright);
+      const { colors } = getDominantColors(probeImage);
+      applyAccent(colors);
     } catch (error) {
       console.warn("取色失败，已保留当前配色。", error);
     }
