@@ -8,7 +8,15 @@
 
 `styles/main.css`：页面样式
 
-`scripts/app.js`：交互逻辑、歌词解析和音频同步
+`scripts/app.js`：主交互逻辑、导出和音频同步
+
+`scripts/lrc.js`：LRC 歌词解析
+
+`scripts/utils.js`：格式化、防抖等通用工具函数
+
+`scripts/color.js`：封面取色与主题色提取
+
+`vendor/ffmpeg/`：FFmpeg WASM 前端封装（用于导出视频）
 
 ## 使用方式
 
