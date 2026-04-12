@@ -1,7 +1,7 @@
 import type { LyricLine } from "./types";
 
 export const parseLrc = (text: string): LyricLine[] => {
-  const normalizedText = String(text || "").replace(/\r/g, "");
+  const normalizedText = String(text || "").replaceAll("\r", "");
 
   if (!normalizedText.trim()) {
     return [];
