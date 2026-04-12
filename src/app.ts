@@ -148,6 +148,11 @@ interface AppState {
   lastDurationText: string;
 }
 
+type ElementConstructor<T extends Element> = Function & {
+  new(): T;
+  readonly name: string;
+};
+
 const state: AppState = {
   title: TEXT.defaultTitle,
   artist: TEXT.defaultArtist,
@@ -185,85 +190,93 @@ const state: AppState = {
   lastDurationText: ""
 };
 
-const getRequiredElement = <T extends Element>(id: string) => {
+const getRequiredElement = <T extends Element>(id: string, type: ElementConstructor<T>) => {
   const element = document.getElementById(id);
 
   if (!element) {
     throw new Error(`Missing required element: #${id}`);
   }
 
-  return element as unknown as T;
+  if (!(element instanceof type)) {
+    throw new TypeError(`Expected #${id} to be a ${type.name}, got <${element.tagName.toLowerCase()}>.`);
+  }
+
+  return element;
 };
 
-const getRequiredQuery = <T extends Element>(selector: string) => {
+const getRequiredQuery = <T extends Element>(selector: string, type: ElementConstructor<T>) => {
   const element = document.querySelector(selector);
 
   if (!element) {
     throw new Error(`Missing required element: ${selector}`);
   }
 
-  return element as unknown as T;
+  if (!(element instanceof type)) {
+    throw new TypeError(`Expected ${selector} to be a ${type.name}, got <${element.tagName.toLowerCase()}>.`);
+  }
+
+  return element;
 };
 
 const elements = {
-  app: getRequiredElement<HTMLDivElement>("app"),
-  audio: getRequiredElement<HTMLAudioElement>("audio"),
-  desktopOnlyKicker: getRequiredElement<HTMLDivElement>("desktopOnlyKicker"),
-  desktopOnlyTitle: getRequiredElement<HTMLHeadingElement>("desktopOnlyTitle"),
-  desktopOnlyDescription: getRequiredElement<HTMLParagraphElement>("desktopOnlyDescription"),
-  exportVideoBtn: getRequiredElement<HTMLButtonElement>("exportVideoBtn"),
-  exportStatus: getRequiredElement<HTMLDivElement>("exportStatus"),
-  cover: getRequiredElement<HTMLImageElement>("cover"),
-  eyebrow: getRequiredElement<HTMLDivElement>("eyebrow"),
-  title: getRequiredElement<HTMLHeadingElement>("title"),
-  artist: getRequiredElement<HTMLDivElement>("artist"),
-  lyricsViewport: getRequiredElement<HTMLDivElement>("lyricsViewport"),
-  lyricsTrack: getRequiredElement<HTMLDivElement>("lyricsTrack"),
-  currentTime: getRequiredElement<HTMLDivElement>("currentTime"),
-  duration: getRequiredElement<HTMLDivElement>("duration"),
-  progress: getRequiredElement<HTMLInputElement>("progress"),
-  panel: getRequiredElement<HTMLDialogElement>("panel"),
-  titleInput: getRequiredElement<HTMLInputElement>("titleInput"),
-  artistInput: getRequiredElement<HTMLInputElement>("artistInput"),
-  lrcInput: getRequiredElement<HTMLTextAreaElement>("lrcInput"),
-  coverInput: getRequiredElement<HTMLInputElement>("coverInput"),
-  audioInput: getRequiredElement<HTMLInputElement>("audioInput"),
-  fontScaleInput: getRequiredElement<HTMLInputElement>("fontScaleInput"),
-  coverScaleInput: getRequiredElement<HTMLInputElement>("coverScaleInput"),
-  playBtn: getRequiredElement<HTMLButtonElement>("playBtn"),
-  togglePanelBtn: getRequiredElement<HTMLButtonElement>("togglePanelBtn"),
-  toggleRecordingBtn: getRequiredElement<HTMLButtonElement>("toggleRecordingBtn"),
-  loadDemoBtn: getRequiredElement<HTMLButtonElement>("loadDemoBtn"),
-  resetViewBtn: getRequiredElement<HTMLButtonElement>("resetViewBtn"),
-  shortcutsBadge: getRequiredElement<HTMLDivElement>("shortcutsBadge"),
-  panelTitle: getRequiredElement<HTMLDivElement>("panelTitle"),
-  songTitleLabel: getRequiredElement<HTMLLabelElement>("songTitleLabel"),
-  artistLabel: getRequiredElement<HTMLLabelElement>("artistLabel"),
-  coverLabel: getRequiredElement<HTMLLabelElement>("coverLabel"),
-  coverPickerLabel: getRequiredElement<HTMLLabelElement>("coverPickerLabel"),
-  audioLabel: getRequiredElement<HTMLLabelElement>("audioLabel"),
-  audioPickerLabel: getRequiredElement<HTMLLabelElement>("audioPickerLabel"),
-  lrcLabel: getRequiredElement<HTMLLabelElement>("lrcLabel"),
-  lrcCalibrationLabel: getRequiredElement<HTMLLabelElement>("lrcCalibrationLabel"),
-  lrcCalibrationHint: getRequiredElement<HTMLDivElement>("lrcCalibrationHint"),
-  lrcOffsetLabel: getRequiredElement<HTMLLabelElement>("lrcOffsetLabel"),
-  lrcOffsetInput: getRequiredElement<HTMLInputElement>("lrcOffsetInput"),
-  lrcOffsetValue: getRequiredElement<HTMLDivElement>("lrcOffsetValue"),
-  nudgeLrcBackBtn: getRequiredElement<HTMLButtonElement>("nudgeLrcBackBtn"),
-  nudgeLrcForwardBtn: getRequiredElement<HTMLButtonElement>("nudgeLrcForwardBtn"),
-  alignCurrentLyricBtn: getRequiredElement<HTMLButtonElement>("alignCurrentLyricBtn"),
-  resetLrcCalibrationBtn: getRequiredElement<HTMLButtonElement>("resetLrcCalibrationBtn"),
-  lrcCalibrationStatus: getRequiredElement<HTMLDivElement>("lrcCalibrationStatus"),
-  fontScaleLabel: getRequiredElement<HTMLLabelElement>("fontScaleLabel"),
-  coverScaleLabel: getRequiredElement<HTMLLabelElement>("coverScaleLabel"),
-  bgDarknessInput: getRequiredElement<HTMLInputElement>("bgDarknessInput"),
-  bgDarknessLabel: getRequiredElement<HTMLLabelElement>("bgDarknessLabel"),
-  bgBlurInput: getRequiredElement<HTMLInputElement>("bgBlurInput"),
-  bgBlurLabel: getRequiredElement<HTMLLabelElement>("bgBlurLabel"),
-  bgAnimateInput: getRequiredElement<HTMLInputElement>("bgAnimateInput"),
-  bgAnimateLabel: getRequiredElement<HTMLSpanElement>("bgAnimateLabel"),
-  workflowHint: getRequiredElement<HTMLDivElement>("workflowHint"),
-  bg: getRequiredQuery<HTMLDivElement>(".bg")
+  app: getRequiredElement("app", HTMLDivElement),
+  audio: getRequiredElement("audio", HTMLAudioElement),
+  desktopOnlyKicker: getRequiredElement("desktopOnlyKicker", HTMLDivElement),
+  desktopOnlyTitle: getRequiredElement("desktopOnlyTitle", HTMLHeadingElement),
+  desktopOnlyDescription: getRequiredElement("desktopOnlyDescription", HTMLParagraphElement),
+  exportVideoBtn: getRequiredElement("exportVideoBtn", HTMLButtonElement),
+  exportStatus: getRequiredElement("exportStatus", HTMLDivElement),
+  cover: getRequiredElement("cover", HTMLImageElement),
+  eyebrow: getRequiredElement("eyebrow", HTMLDivElement),
+  title: getRequiredElement("title", HTMLHeadingElement),
+  artist: getRequiredElement("artist", HTMLDivElement),
+  lyricsViewport: getRequiredElement("lyricsViewport", HTMLDivElement),
+  lyricsTrack: getRequiredElement("lyricsTrack", HTMLDivElement),
+  currentTime: getRequiredElement("currentTime", HTMLDivElement),
+  duration: getRequiredElement("duration", HTMLDivElement),
+  progress: getRequiredElement("progress", HTMLInputElement),
+  panel: getRequiredElement("panel", HTMLDialogElement),
+  titleInput: getRequiredElement("titleInput", HTMLInputElement),
+  artistInput: getRequiredElement("artistInput", HTMLInputElement),
+  lrcInput: getRequiredElement("lrcInput", HTMLTextAreaElement),
+  coverInput: getRequiredElement("coverInput", HTMLInputElement),
+  audioInput: getRequiredElement("audioInput", HTMLInputElement),
+  fontScaleInput: getRequiredElement("fontScaleInput", HTMLInputElement),
+  coverScaleInput: getRequiredElement("coverScaleInput", HTMLInputElement),
+  playBtn: getRequiredElement("playBtn", HTMLButtonElement),
+  togglePanelBtn: getRequiredElement("togglePanelBtn", HTMLButtonElement),
+  toggleRecordingBtn: getRequiredElement("toggleRecordingBtn", HTMLButtonElement),
+  loadDemoBtn: getRequiredElement("loadDemoBtn", HTMLButtonElement),
+  resetViewBtn: getRequiredElement("resetViewBtn", HTMLButtonElement),
+  shortcutsBadge: getRequiredElement("shortcutsBadge", HTMLDivElement),
+  panelTitle: getRequiredElement("panelTitle", HTMLDivElement),
+  songTitleLabel: getRequiredElement("songTitleLabel", HTMLLabelElement),
+  artistLabel: getRequiredElement("artistLabel", HTMLLabelElement),
+  coverLabel: getRequiredElement("coverLabel", HTMLLabelElement),
+  coverPickerLabel: getRequiredElement("coverPickerLabel", HTMLLabelElement),
+  audioLabel: getRequiredElement("audioLabel", HTMLLabelElement),
+  audioPickerLabel: getRequiredElement("audioPickerLabel", HTMLLabelElement),
+  lrcLabel: getRequiredElement("lrcLabel", HTMLLabelElement),
+  lrcCalibrationLabel: getRequiredElement("lrcCalibrationLabel", HTMLLabelElement),
+  lrcCalibrationHint: getRequiredElement("lrcCalibrationHint", HTMLDivElement),
+  lrcOffsetLabel: getRequiredElement("lrcOffsetLabel", HTMLLabelElement),
+  lrcOffsetInput: getRequiredElement("lrcOffsetInput", HTMLInputElement),
+  lrcOffsetValue: getRequiredElement("lrcOffsetValue", HTMLDivElement),
+  nudgeLrcBackBtn: getRequiredElement("nudgeLrcBackBtn", HTMLButtonElement),
+  nudgeLrcForwardBtn: getRequiredElement("nudgeLrcForwardBtn", HTMLButtonElement),
+  alignCurrentLyricBtn: getRequiredElement("alignCurrentLyricBtn", HTMLButtonElement),
+  resetLrcCalibrationBtn: getRequiredElement("resetLrcCalibrationBtn", HTMLButtonElement),
+  lrcCalibrationStatus: getRequiredElement("lrcCalibrationStatus", HTMLDivElement),
+  fontScaleLabel: getRequiredElement("fontScaleLabel", HTMLLabelElement),
+  coverScaleLabel: getRequiredElement("coverScaleLabel", HTMLLabelElement),
+  bgDarknessInput: getRequiredElement("bgDarknessInput", HTMLInputElement),
+  bgDarknessLabel: getRequiredElement("bgDarknessLabel", HTMLLabelElement),
+  bgBlurInput: getRequiredElement("bgBlurInput", HTMLInputElement),
+  bgBlurLabel: getRequiredElement("bgBlurLabel", HTMLLabelElement),
+  bgAnimateInput: getRequiredElement("bgAnimateInput", HTMLInputElement),
+  bgAnimateLabel: getRequiredElement("bgAnimateLabel", HTMLSpanElement),
+  workflowHint: getRequiredElement("workflowHint", HTMLDivElement),
+  bg: getRequiredQuery(".bg", HTMLDivElement)
 } as const;
 
 const cloneLyrics = (lyrics: LyricLine[]) => structuredClone(lyrics) as LyricLine[];
