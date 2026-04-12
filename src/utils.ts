@@ -1,7 +1,4 @@
-export const debounce = <TArgs extends unknown[]>(
-  fn: (...args: TArgs) => void,
-  ms: number,
-) => {
+export const debounce = <TArgs extends unknown[]>(fn: (...args: TArgs) => void, ms: number) => {
   let timer: number | undefined;
 
   return (...args: TArgs) => {

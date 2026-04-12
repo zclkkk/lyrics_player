@@ -19,7 +19,8 @@ export const TEXT = {
   lrcLabel: "LRC 歌词",
   lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
   lrcCalibrationLabel: "歌词校准",
-  lrcCalibrationHint: "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点\u201C从当前句起对齐\u201D。",
+  lrcCalibrationHint:
+    "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点\u201C从当前句起对齐\u201D。",
   lrcOffsetLabel: "整体偏移",
   lrcNudgeBack: "整体 -100 ms",
   lrcNudgeForward: "整体 +100 ms",
@@ -60,5 +61,5 @@ export const TEXT = {
   untitledSong: "未命名作品",
   unknownArtist: "未知歌手",
   demoTitle: "夜空中最亮的星（翻唱）",
-  demoArtist: "你的名字 · Cover"
+  demoArtist: "你的名字 · Cover",
 } as const;

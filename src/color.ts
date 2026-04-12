@@ -4,7 +4,7 @@ const FALLBACK_COLORS: [RgbColor, RgbColor, RgbColor, RgbColor] = [
   [160, 80, 120],
   [255, 116, 116],
   [255, 196, 124],
-  [140, 190, 255]
+  [140, 190, 255],
 ];
 
 const collectPixels = (imageData: ImageData) => {
@@ -48,11 +48,7 @@ const medianCut = (pixels: RgbColor[], depth: number): RgbColor[] => {
     }
 
     const pixelCount = pixels.length;
-    return [[
-      Math.round(rSum / pixelCount),
-      Math.round(gSum / pixelCount),
-      Math.round(bSum / pixelCount)
-    ]];
+    return [[Math.round(rSum / pixelCount), Math.round(gSum / pixelCount), Math.round(bSum / pixelCount)]];
   }
 
   let rMin = 255;
@@ -79,10 +75,7 @@ const medianCut = (pixels: RgbColor[], depth: number): RgbColor[] => {
   pixels.sort((left, right) => left[splitChannel] - right[splitChannel]);
 
   const midpoint = pixels.length >> 1;
-  return [
-    ...medianCut(pixels.slice(0, midpoint), depth - 1),
-    ...medianCut(pixels.slice(midpoint), depth - 1)
-  ];
+  return [...medianCut(pixels.slice(0, midpoint), depth - 1), ...medianCut(pixels.slice(midpoint), depth - 1)];
 };
 
 const boostSaturation = ([r, g, b]: RgbColor, factor: number): RgbColor => {
@@ -91,7 +84,7 @@ const boostSaturation = ([r, g, b]: RgbColor, factor: number): RgbColor => {
   return [
     Math.min(255, Math.max(0, Math.round(gray + (r - gray) * factor))),
     Math.min(255, Math.max(0, Math.round(gray + (g - gray) * factor))),
-    Math.min(255, Math.max(0, Math.round(gray + (b - gray) * factor)))
+    Math.min(255, Math.max(0, Math.round(gray + (b - gray) * factor))),
   ];
 };
 
@@ -121,9 +114,7 @@ export const getDominantColors = (image: CanvasImageSource) => {
 };
 
 export const applyAccent = (colors: readonly RgbColor[]) => {
-  const palette = colors.length >= 4
-    ? [colors[0]!, colors[1]!, colors[2]!, colors[3]!] as const
-    : FALLBACK_COLORS;
+  const palette = colors.length >= 4 ? ([colors[0]!, colors[1]!, colors[2]!, colors[3]!] as const) : FALLBACK_COLORS;
   const [accent3, accent1, accent2, accent4] = palette;
   const style = document.documentElement.style;
 

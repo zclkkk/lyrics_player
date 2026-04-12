@@ -26,8 +26,12 @@ interface ObserveStartOptions {
 }
 
 const observeStart = ({
-  target, startEvents, errorEvents,
-  hasStarted, getError, cancelledErrorMessage,
+  target,
+  startEvents,
+  errorEvents,
+  hasStarted,
+  getError,
+  cancelledErrorMessage,
 }: ObserveStartOptions) => {
   const ac = new AbortController();
   const { signal } = ac;
@@ -49,9 +53,13 @@ const observeStart = ({
   for (const e of startEvents) target.addEventListener(e, handleStart, { signal });
   for (const e of errorEvents) target.addEventListener(e, handleError, { signal });
 
-  fallbackSignal.addEventListener("abort", () => {
-    if (hasStarted()) handleStart();
-  }, { once: true, signal });
+  fallbackSignal.addEventListener(
+    "abort",
+    () => {
+      if (hasStarted()) handleStart();
+    },
+    { once: true, signal },
+  );
 
   signal.addEventListener("abort", () => {
     if (!settled) {
@@ -107,10 +115,15 @@ export const loadFfmpegCore = async (onMuxProgress: (percent: number) => void) =
 };
 
 const cleanupFfmpegFiles = async (ffmpeg: FFmpeg, names: string[]) => {
-  await Promise.all(names.map(async (n) => {
-    try { await ffmpeg.deleteFile(n); }
-    catch (e) { console.warn("清理 ffmpeg 临时文件失败：", n, e); }
-  }));
+  await Promise.all(
+    names.map(async (n) => {
+      try {
+        await ffmpeg.deleteFile(n);
+      } catch (e) {
+        console.warn("清理 ffmpeg 临时文件失败：", n, e);
+      }
+    }),
+  );
 };
 
 export const muxRecordedVideo = async (
@@ -131,10 +144,21 @@ export const muxRecordedVideo = async (
     await ffmpeg.writeFile(captureName, await recordedBlob.bytes());
     await ffmpeg.writeFile(audioName, await audioFile.bytes());
     await ffmpeg.exec([
-      "-i", captureName, ...offsetArgs, "-i", audioName,
-      "-map", "0:v:0", "-map", "1:a:0",
-      "-c:v", "copy", "-c:a", "copy",
-      "-shortest", outputName,
+      "-i",
+      captureName,
+      ...offsetArgs,
+      "-i",
+      audioName,
+      "-map",
+      "0:v:0",
+      "-map",
+      "1:a:0",
+      "-c:v",
+      "copy",
+      "-c:a",
+      "copy",
+      "-shortest",
+      outputName,
     ]);
 
     const out = await ffmpeg.readFile(outputName);

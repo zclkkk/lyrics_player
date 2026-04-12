@@ -3,4 +3,3 @@ export interface LyricLine {
   text: string;
   isError?: boolean;
 }
-

@@ -24,7 +24,7 @@ export const parseLrc = (text: string): LyricLine[] => {
 
       lines.push({
         time: minutes * 60 + seconds + fraction,
-        text: content || " "
+        text: content || " ",
       });
     }
 
@@ -32,11 +32,13 @@ export const parseLrc = (text: string): LyricLine[] => {
       const trimmed = row.trim();
 
       if (!/^\[[a-z]+:/i.test(trimmed)) {
-        return [{
-          time: Number.POSITIVE_INFINITY,
-          text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】",
-          isError: true
-        }];
+        return [
+          {
+            time: Number.POSITIVE_INFINITY,
+            text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】",
+            isError: true,
+          },
+        ];
       }
 
       lines.push({ time: Number.POSITIVE_INFINITY, text: trimmed });
@@ -46,4 +48,3 @@ export const parseLrc = (text: string): LyricLine[] => {
   lines.sort((left, right) => left.time - right.time);
   return lines;
 };
-

@@ -2,8 +2,8 @@ import type { FFmpeg } from "@ffmpeg/ffmpeg";
 
 import { applyAccent, getDominantColors } from "./color";
 import {
-  EXPORT_RECORDING_MIME_TYPE,
   downloadBlob,
+  EXPORT_RECORDING_MIME_TYPE,
   loadFfmpegCore,
   muxRecordedVideo,
   observeAudioPlaybackStart,
@@ -13,13 +13,7 @@ import {
 import { parseLrc } from "./lrc";
 import { TEXT } from "./text";
 import type { LyricLine } from "./types";
-import {
-  debounce,
-  formatLrcTimestamp,
-  formatSignedMilliseconds,
-  formatTime,
-  getLyricPreview,
-} from "./utils";
+import { debounce, formatLrcTimestamp, formatSignedMilliseconds, formatTime, getLyricPreview } from "./utils";
 
 const demo = {
   title: TEXT.demoTitle,
@@ -45,6 +39,7 @@ const demo = {
 [01:36.00]请指引我靠近你`,
 } as const;
 
+// biome-ignore lint/suspicious/noExplicitAny: abstract constructor signature requires any[]
 const getEl = <T extends Element>(sel: string, type: abstract new (...args: any[]) => T): T => {
   const found = document.querySelector(sel);
   if (!found) throw new Error(`Missing: ${sel}`);
@@ -187,7 +182,9 @@ const state: AppState = {
   lastDurationText: "",
 };
 
-const revokeAll = (urls: string[]) => { for (const u of urls) URL.revokeObjectURL(u); };
+const revokeAll = (urls: string[]) => {
+  for (const u of urls) URL.revokeObjectURL(u);
+};
 
 const isExportBusy = () => state.isExporting || state.isMuxing || !!state.ffmpegLoadPromise;
 
@@ -273,17 +270,11 @@ const applyLyricsData = (lyrics: LyricLine[]) => {
 
 const getLyricsOffsetSeconds = () => state.lyricsGlobalOffsetMs / 1000;
 
-const getEffectiveLyricTime = (time: number) => (
-  Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time
-);
+const getEffectiveLyricTime = (time: number) => (Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time);
 
-const getLyricsValidationMessage = () => (
-  state.lyrics.find((line) => line.isError)?.text || ""
-);
+const getLyricsValidationMessage = () => state.lyrics.find((line) => line.isError)?.text || "";
 
-const hasCalibratableLyrics = () => (
-  state.lyrics.some((line) => Number.isFinite(line.time))
-);
+const hasCalibratableLyrics = () => state.lyrics.some((line) => Number.isFinite(line.time));
 
 const getCalibrationAnchorIndex = () => {
   if (!hasCalibratableLyrics()) {
@@ -348,8 +339,7 @@ const updateLyricCalibrationUi = () => {
     return;
   }
 
-  el.lrcCalibrationStatus.textContent =
-    `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 对齐句：${getLyricPreview(anchorLine.text)} · 时间 ${formatLrcTimestamp(getEffectiveLyricTime(anchorLine.time))}`;
+  el.lrcCalibrationStatus.textContent = `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 对齐句：${getLyricPreview(anchorLine.text)} · 时间 ${formatLrcTimestamp(getEffectiveLyricTime(anchorLine.time))}`;
 };
 
 const updateProgress = () => {
@@ -452,7 +442,7 @@ const shiftLyricsFromIndex = (startIndex: number, deltaSeconds: number) => {
 
     return {
       ...line,
-      time: Math.max(0, line.time + appliedDelta)
+      time: Math.max(0, line.time + appliedDelta),
     };
   });
 
@@ -506,18 +496,22 @@ const recalcCoverColor = () => {
   const coverUrl = state.coverUrl;
   const probeImage = new Image();
 
-  probeImage.addEventListener("load", () => {
-    if (state.coverUrl !== coverUrl) {
-      return;
-    }
+  probeImage.addEventListener(
+    "load",
+    () => {
+      if (state.coverUrl !== coverUrl) {
+        return;
+      }
 
-    try {
-      const { colors } = getDominantColors(probeImage);
-      applyAccent(colors);
-    } catch (error) {
-      console.warn("取色失败，已保留当前配色。", error);
-    }
-  }, { once: true });
+      try {
+        const { colors } = getDominantColors(probeImage);
+        applyAccent(colors);
+      } catch (error) {
+        console.warn("取色失败，已保留当前配色。", error);
+      }
+    },
+    { once: true },
+  );
 
   probeImage.src = coverUrl;
 };
@@ -557,7 +551,7 @@ const isLrcFile = (file: File | null | undefined) => {
 };
 
 const importCoverFile = (file: File | null | undefined) => {
-  if (!file || !file.type.startsWith("image/")) {
+  if (!file?.type.startsWith("image/")) {
     return false;
   }
 
@@ -566,7 +560,7 @@ const importCoverFile = (file: File | null | undefined) => {
 };
 
 const importAudioFile = (file: File | null | undefined) => {
-  if (!file || !file.type.startsWith("audio/")) {
+  if (!file?.type.startsWith("audio/")) {
     return false;
   }
 
@@ -631,7 +625,7 @@ const updateLyrics = (force = false) => {
     previousActiveIndex + 1,
     activeIndex - 1,
     activeIndex,
-    activeIndex + 1
+    activeIndex + 1,
   ]);
 
   for (const index of indicesToUpdate) {
@@ -978,15 +972,23 @@ const finalizeRecordedVideo = async () => {
     }
 
     if (!state.ffmpeg) throw new Error("EXPORT_ENGINE_NOT_READY");
-    const muxedBlob = await muxRecordedVideo(state.ffmpeg, ++state.exportJobCount, recordedBlob, audioFile, audioLeadInMs);
+    const muxedBlob = await muxRecordedVideo(
+      state.ffmpeg,
+      ++state.exportJobCount,
+      recordedBlob,
+      audioFile,
+      audioLeadInMs,
+    );
     doDownload(muxedBlob, `${exportBaseName}.mkv`);
     setExportStatus(TEXT.exportDoneHint);
   } catch (error) {
     console.error("Muxing failed, falling back to raw capture:", error);
     doDownload(recordedBlob, `${exportBaseName}-capture.webm`);
-    alert(error instanceof Error && error.message === "EXPORT_AUDIO_FILE_MISSING"
-      ? TEXT.exportRequiresOriginalAudio
-      : TEXT.exportMuxFailed);
+    alert(
+      error instanceof Error && error.message === "EXPORT_AUDIO_FILE_MISSING"
+        ? TEXT.exportRequiresOriginalAudio
+        : TEXT.exportMuxFailed,
+    );
     setExportStatus(TEXT.exportFallbackHint);
   } finally {
     state.isMuxing = false;
@@ -1060,12 +1062,12 @@ const startExporting = async () => {
       video: { displaySurface: "browser" },
       audio: false,
       preferCurrentTab: true,
-      selfBrowserSurface: "include"
+      selfBrowserSurface: "include",
     } as DisplayMediaStreamOptions);
     const videoTrack = videoStream.getVideoTracks()[0];
 
     if (!videoTrack) {
-      videoStream.getTracks().forEach((track) => track.stop());
+      for (const track of videoStream.getTracks()) track.stop();
       throw new Error("EXPORT_VIDEO_TRACK_MISSING");
     }
 
@@ -1130,7 +1132,7 @@ const startExporting = async () => {
         error instanceof Error && error.message === "MEDIA_RECORDER_START_FAILED"
           ? "Recorder failed to start during export:"
           : "Audio playback failed during export:",
-        error
+        error,
       );
       stopExporting(false);
       return;
@@ -1143,7 +1145,7 @@ const startExporting = async () => {
     state.exportEndedAc = new AbortController();
     el.audio.addEventListener("ended", () => stopExporting(), {
       once: true,
-      signal: state.exportEndedAc.signal
+      signal: state.exportEndedAc.signal,
     });
   } catch (error) {
     console.error("Recording failed or rejected:", error);
@@ -1160,19 +1162,13 @@ const startExporting = async () => {
       return;
     }
 
-    if (
-      error instanceof Error &&
-      error.message.startsWith("ffmpeg failed to fetch file")
-    ) {
+    if (error instanceof Error && error.message.startsWith("ffmpeg failed to fetch file")) {
       alert(TEXT.exportEngineFailed);
       setExportStatus(TEXT.exportEngineFailed);
       return;
     }
 
-    if (
-      error instanceof DOMException &&
-      ["AbortError", "NotAllowedError"].includes(error.name)
-    ) {
+    if (error instanceof DOMException && ["AbortError", "NotAllowedError"].includes(error.name)) {
       setExportStatus(TEXT.exportCancelledHint);
       return;
     }
@@ -1322,10 +1318,7 @@ const bindEvents = () => {
         return;
       }
 
-      el.audio.currentTime = Math.min(
-        el.audio.duration || 0,
-        (el.audio.currentTime || 0) + 5
-      );
+      el.audio.currentTime = Math.min(el.audio.duration || 0, (el.audio.currentTime || 0) + 5);
       updateProgress();
       return;
     }
