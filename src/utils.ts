@@ -1,12 +1,16 @@
-export const debounce = (fn, ms) => {
+export const debounce = <TArgs extends unknown[]>(
+  fn: (...args: TArgs) => void,
+  ms: number,
+) => {
   let timer = 0;
-  return (...args) => {
-    clearTimeout(timer);
+
+  return (...args: TArgs) => {
+    window.clearTimeout(timer);
     timer = window.setTimeout(() => fn(...args), ms);
   };
 };
 
-export const formatTime = (seconds) => {
+export const formatTime = (seconds: number) => {
   if (!Number.isFinite(seconds)) {
     return "00:00";
   }
@@ -18,12 +22,12 @@ export const formatTime = (seconds) => {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 };
 
-export const formatSignedMilliseconds = (milliseconds) => {
+export const formatSignedMilliseconds = (milliseconds: number) => {
   const rounded = Math.round(milliseconds);
   return `${rounded > 0 ? "+" : ""}${rounded} ms`;
 };
 
-export const formatLrcTimestamp = (seconds) => {
+export const formatLrcTimestamp = (seconds: number) => {
   if (!Number.isFinite(seconds)) {
     return "--:--.--";
   }
@@ -37,12 +41,12 @@ export const formatLrcTimestamp = (seconds) => {
   return `${String(minutes).padStart(2, "0")}:${String(wholeSeconds).padStart(2, "0")}.${String(centiseconds).padStart(2, "0")}`;
 };
 
-export const getLyricPreview = (text) => {
+export const getLyricPreview = (text: string) => {
   const trimmed = String(text || "").trim() || "（空行）";
   return trimmed.length > 18 ? `${trimmed.slice(0, 18)}…` : trimmed;
 };
 
-export const getFileExtension = (filename) => {
+export const getFileExtension = (filename: string) => {
   const matched = /\.([a-z0-9]+)$/i.exec(String(filename || ""));
-  return matched ? `.${matched[1].toLowerCase()}` : "";
+  return matched ? `.${matched[1]!.toLowerCase()}` : "";
 };
