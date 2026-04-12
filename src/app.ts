@@ -821,7 +821,23 @@ const clearPendingExportStartObservers = () => {
   clearPendingPlaybackStart();
 };
 
-const observeMediaRecorderStart = (mediaRecorder: MediaRecorder) => {
+interface ObserveStartOptions {
+  target: EventTarget;
+  startEvents: readonly string[];
+  errorEvents: readonly string[];
+  hasStarted: () => boolean;
+  getError: () => Error;
+  cancelledErrorMessage: string;
+}
+
+const observeStart = ({
+  target,
+  startEvents,
+  errorEvents,
+  hasStarted,
+  getError,
+  cancelledErrorMessage
+}: ObserveStartOptions) => {
   const ac = new AbortController();
   const { signal } = ac;
   const { promise, resolve, reject } = Promise.withResolvers<number>();
@@ -841,12 +857,18 @@ const observeMediaRecorderStart = (mediaRecorder: MediaRecorder) => {
   };
 
   const handleStart = () => finalize(() => resolve(performance.now()));
-  const handleError = () => finalize(() => reject(new Error("MEDIA_RECORDER_START_FAILED")));
+  const handleError = () => finalize(() => reject(getError()));
 
-  mediaRecorder.addEventListener("start", handleStart, { signal });
-  mediaRecorder.addEventListener("error", handleError, { signal });
+  for (const eventName of startEvents) {
+    target.addEventListener(eventName, handleStart, { signal });
+  }
+
+  for (const eventName of errorEvents) {
+    target.addEventListener(eventName, handleError, { signal });
+  }
+
   fallbackSignal.addEventListener("abort", () => {
-    if (mediaRecorder.state === "recording") {
+    if (hasStarted()) {
       handleStart();
     }
   }, { once: true, signal });
@@ -854,53 +876,31 @@ const observeMediaRecorderStart = (mediaRecorder: MediaRecorder) => {
   signal.addEventListener("abort", () => {
     if (!settled) {
       settled = true;
-      reject(new Error("MEDIA_RECORDER_START_CANCELLED"));
+      reject(new Error(cancelledErrorMessage));
     }
   });
 
   return { promise, ac };
 };
 
+const observeMediaRecorderStart = (mediaRecorder: MediaRecorder) => observeStart({
+  target: mediaRecorder,
+  startEvents: ["start"],
+  errorEvents: ["error"],
+  hasStarted: () => mediaRecorder.state === "recording",
+  getError: () => new Error("MEDIA_RECORDER_START_FAILED"),
+  cancelledErrorMessage: "MEDIA_RECORDER_START_CANCELLED"
+});
+
 const observeAudioPlaybackStart = (audioElement: HTMLAudioElement) => {
-  const ac = new AbortController();
-  const { signal } = ac;
-  const { promise, resolve, reject } = Promise.withResolvers<number>();
-  void promise.catch(() => {});
-  const fallbackSignal = AbortSignal.timeout(EXPORT_START_TIMEOUT_MS);
-
-  let settled = false;
-
-  const finalize = (callback: () => void) => {
-    if (settled) {
-      return;
-    }
-
-    settled = true;
-    ac.abort();
-    callback();
-  };
-
-  const handleStart = () => finalize(() => resolve(performance.now()));
-  const handleError = () => finalize(() => reject(audioElement.error || new Error("AUDIO_PLAYBACK_START_FAILED")));
-
-  audioElement.addEventListener("playing", handleStart, { signal });
-  audioElement.addEventListener("timeupdate", handleStart, { signal });
-  audioElement.addEventListener("error", handleError, { signal });
-
-  fallbackSignal.addEventListener("abort", () => {
-    if (!audioElement.paused) {
-      handleStart();
-    }
-  }, { once: true, signal });
-
-  signal.addEventListener("abort", () => {
-    if (!settled) {
-      settled = true;
-      reject(new Error("AUDIO_PLAYBACK_START_CANCELLED"));
-    }
+  return observeStart({
+    target: audioElement,
+    startEvents: ["playing", "timeupdate"],
+    errorEvents: ["error"],
+    hasStarted: () => !audioElement.paused,
+    getError: () => new Error(audioElement.error?.message || "AUDIO_PLAYBACK_START_FAILED"),
+    cancelledErrorMessage: "AUDIO_PLAYBACK_START_CANCELLED"
   });
-
-  return { promise, ac };
 };
 
 const seekByProgressValue = (rawValue: string) => {
