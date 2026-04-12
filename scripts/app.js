@@ -113,6 +113,7 @@ const state = {
   recordingMimeType: "",
   exportBaseName: "",
   exportAudioLeadInMs: 0,
+  pendingRecordingStartAc: null,
   pendingPlaybackStartAc: null,
   playbackSyncFrame: 0,
   ffmpeg: null,
@@ -614,6 +615,13 @@ const startPlaybackSyncLoop = () => {
   state.playbackSyncFrame = requestAnimationFrame(tick);
 };
 
+const clearPendingRecordingStart = () => {
+  if (state.pendingRecordingStartAc) {
+    state.pendingRecordingStartAc.abort();
+    state.pendingRecordingStartAc = null;
+  }
+};
+
 const clearPendingPlaybackStart = () => {
   if (state.pendingPlaybackStartAc) {
     state.pendingPlaybackStartAc.abort();
@@ -621,10 +629,61 @@ const clearPendingPlaybackStart = () => {
   }
 };
 
+const clearPendingExportStartObservers = () => {
+  clearPendingRecordingStart();
+  clearPendingPlaybackStart();
+};
+
+const observeMediaRecorderStart = (mediaRecorder) => {
+  const ac = new AbortController();
+  const { signal } = ac;
+  let resolveStart;
+  let rejectStart;
+  let fallbackTimer = 0;
+  const promise = new Promise((resolve, reject) => {
+    resolveStart = resolve;
+    rejectStart = reject;
+  });
+  promise.catch(() => {});
+
+  let settled = false;
+
+  const finalize = (callback) => {
+    if (settled) return;
+    settled = true;
+    clearTimeout(fallbackTimer);
+    ac.abort();
+    callback();
+  };
+
+  const handleStart = () => finalize(() => resolveStart(performance.now()));
+  const handleError = () => finalize(() => rejectStart(mediaRecorder.error || new Error("MEDIA_RECORDER_START_FAILED")));
+
+  mediaRecorder.addEventListener("start", handleStart, { signal });
+  mediaRecorder.addEventListener("error", handleError, { signal });
+
+  fallbackTimer = window.setTimeout(() => {
+    if (mediaRecorder.state === "recording") {
+      handleStart();
+    }
+  }, 1200);
+
+  signal.addEventListener("abort", () => {
+    if (!settled) {
+      settled = true;
+      clearTimeout(fallbackTimer);
+      rejectStart(new Error("MEDIA_RECORDER_START_CANCELLED"));
+    }
+  });
+
+  return { promise, ac };
+};
+
 const observeAudioPlaybackStart = (audioElement) => {
   const ac = new AbortController();
   const { signal } = ac;
   const { promise, resolve: resolvePlayback, reject: rejectPlayback } = Promise.withResolvers();
+  promise.catch(() => {});
 
   let settled = false;
 
@@ -833,7 +892,7 @@ const releaseDisplayStream = () => {
 };
 
 const resetExportSession = () => {
-  clearPendingPlaybackStart();
+  clearPendingExportStartObservers();
   state.mediaRecorder = null;
   state.recordedChunks = [];
   state.shouldSaveExport = false;
@@ -846,7 +905,7 @@ const teardownExportUi = () => {
   state.isExporting = false;
   document.body.classList.remove("is-exporting");
   setRecordingMode(false);
-  clearPendingPlaybackStart();
+  clearPendingExportStartObservers();
   elements.audio.pause();
   if (state.exportEndedAc) {
     state.exportEndedAc.abort();
@@ -1199,22 +1258,34 @@ const startExporting = async () => {
     updateExportUi();
     setExportStatus(TEXT.exportRecordingHint);
 
-    const playbackStartObserver = observeAudioPlaybackStart(elements.audio);
-    state.pendingPlaybackStartAc = playbackStartObserver.ac;
-    const recordingStartedAt = performance.now();
+    const recordingStartObserver = observeMediaRecorderStart(state.mediaRecorder);
+    state.pendingRecordingStartAc = recordingStartObserver.ac;
     state.mediaRecorder.start(1000);
 
     try {
+      const recordingStartedAt = await recordingStartObserver.promise;
+      state.pendingRecordingStartAc = null;
+
+      const playbackStartObserver = observeAudioPlaybackStart(elements.audio);
+      state.pendingPlaybackStartAc = playbackStartObserver.ac;
       await elements.audio.play();
       const playbackStartedAt = await playbackStartObserver.promise;
       state.pendingPlaybackStartAc = null;
       state.exportAudioLeadInMs = Math.max(0, playbackStartedAt - recordingStartedAt);
     } catch (error) {
-      clearPendingPlaybackStart();
-      if (error?.message === "AUDIO_PLAYBACK_START_CANCELLED" && !state.isExporting) {
+      clearPendingExportStartObservers();
+      if (
+        ["MEDIA_RECORDER_START_CANCELLED", "AUDIO_PLAYBACK_START_CANCELLED"].includes(error?.message) &&
+        !state.isExporting
+      ) {
         return;
       }
-      console.error("Audio playback failed during export:", error);
+      console.error(
+        error?.message === "MEDIA_RECORDER_START_FAILED"
+          ? "Recorder failed to start during export:"
+          : "Audio playback failed during export:",
+        error
+      );
       stopExporting(false);
       return;
     }
@@ -1410,7 +1481,7 @@ const bindEvents = () => {
 
   window.addEventListener("beforeunload", () => {
     stopPlaybackSyncLoop();
-    clearPendingPlaybackStart();
+    clearPendingExportStartObservers();
     revokeObjectUrls();
     revokeFfmpegAssetUrls();
     if (state.ffmpeg) {
