@@ -102,7 +102,8 @@ const demo = {
   lrc: string;
 };
 
-const FFMPEG_CORE_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm";
+const FFMPEG_CORE_VERSION = "0.12.15";
+const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`;
 const EXPORT_RECORDING_MIME_TYPE = "video/webm;codecs=vp9";
 const EXPORT_START_TIMEOUT_MS = 1200;
 
