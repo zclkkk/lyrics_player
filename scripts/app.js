@@ -53,17 +53,13 @@ const TEXT = {
   exportEngineFailed: "导出内核加载失败。请检查网络；若你是直接打开 index.html，请改用任意本地 HTTP 服务打开。",
   exportStartFailed: "一键导出启动失败，请重试，或改用 OBS / 系统录屏。",
   exportMuxFailed: "原音频封装失败，已回退为纯画面录制文件。",
-  recalcColor: "重新取色",
   workflowHint:
     "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
   coverAlt: "歌曲封面",
   defaultTitle: "你的翻唱作品",
   defaultArtist: "你的名字 / 原唱信息",
-  emptyStateLine1: "导入音频与 LRC 后开始播放。",
-  emptyStateLine2: "如果只想做静态镜头，也可以只导入封面和歌词。",
   untitledSong: "未命名作品",
   unknownArtist: "未知歌手",
-  emptyLyrics: "请导入或粘贴 LRC 歌词",
   demoTitle: "夜空中最亮的星（翻唱）",
   demoArtist: "你的名字 · Cover"
 };
