@@ -604,10 +604,15 @@ const recalcCoverColor = () => {
     return;
   }
 
+  const coverUrl = state.coverUrl;
   const probeImage = new Image();
   probeImage.crossOrigin = "anonymous";
 
   probeImage.addEventListener("load", () => {
+    if (state.coverUrl !== coverUrl) {
+      return;
+    }
+
     try {
       const { colors } = getDominantColors(probeImage);
       applyAccent(colors);
@@ -616,7 +621,7 @@ const recalcCoverColor = () => {
     }
   }, { once: true });
 
-  probeImage.src = state.coverUrl;
+  probeImage.src = coverUrl;
 };
 
 const setCover = (url: string) => {
