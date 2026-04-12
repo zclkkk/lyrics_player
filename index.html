@@ -168,13 +168,18 @@
   </div>
 
   <script>
-    if (location.protocol === 'file:') {
-      document.body.textContent = '';
-      var msg = document.createElement('p');
-      msg.style.cssText = 'max-width:480px;margin:15vh auto;padding:32px;font:16px/1.8 system-ui,sans-serif;color:#e8e8e8;background:#1a1a1a;border-radius:20px;text-align:center;';
-      msg.innerHTML = '<strong style="font-size:20px;display:block;margin-bottom:12px;">&#9888; 请通过 HTTP 服务打开</strong>本项目使用 ES 模块，无法通过直接双击 index.html 运行。<br><br>请使用任意本地 HTTP 服务，例如：<br><code style="background:#333;padding:2px 8px;border-radius:8px;">python -m http.server 8000</code><br>然后访问 <code style="background:#333;padding:2px 8px;border-radius:8px;">http://127.0.0.1:8000</code>';
-      document.body.appendChild(msg);
-      throw new Error('file:// protocol is not supported');
+    if (location.protocol === "file:") {
+      const message = document.createElement("p");
+      message.style.cssText = "max-width:480px;margin:15vh auto;padding:32px;font:16px/1.8 system-ui,sans-serif;color:#e8e8e8;background:#1a1a1a;border-radius:20px;text-align:center;";
+      message.innerHTML = `
+        <strong style="font-size:20px;display:block;margin-bottom:12px;">&#9888; 请通过 HTTP 服务打开</strong>
+        本项目使用 ES 模块，无法通过直接双击 index.html 运行。<br><br>
+        请使用任意本地 HTTP 服务，例如：<br>
+        <code style="background:#333;padding:2px 8px;border-radius:8px;">python -m http.server 8000</code><br>
+        然后访问 <code style="background:#333;padding:2px 8px;border-radius:8px;">http://127.0.0.1:8000</code>
+      `;
+      document.body.replaceChildren(message);
+      throw new Error("file:// protocol is not supported");
     }
   </script>
   <script src="./vendor/ffmpeg/ffmpeg.js"></script>

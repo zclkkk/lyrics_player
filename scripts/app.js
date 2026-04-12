@@ -37,7 +37,7 @@ const TEXT = {
   exportStopButton: "■ 结束录制并封装",
   exportPreparingButton: "正在准备导出引擎…",
   exportMuxingButton: "正在封装原音频…",
-  exportIdleHint: "首次导出会联网加载 FFmpeg 内核（约 31 MB）；如果你是直接双击打开 index.html，请改用任意本地 HTTP 服务打开后再导出。",
+  exportIdleHint: "首次导出会联网加载 FFmpeg 内核（约 31 MB）。",
   exportPreparingHint: "正在联网加载 FFmpeg 内核，首次可能需要几十秒，请稍候。",
   exportPickTabHint: "请在浏览器弹窗中选择当前标签页，确认后开始录制。",
   exportRecordingHint: "正在录制画面；录制结束后会自动把你导入的原始音频封装进 MKV。",
@@ -49,8 +49,7 @@ const TEXT = {
   exportRequiresAudio: "请先导入音频文件！",
   exportRequiresOriginalAudio: "请通过文件选择或拖拽导入原始音频后再导出，这样才能保留原音频。",
   exportUnsupported: "当前浏览器不支持网页录屏导出，请改用新版 Chrome / Edge 或 OBS。",
-  exportRequiresLocalServer: "当前页面是通过 file:// 直接打开的。导出功能请改用任意本地 HTTP 服务打开项目目录后再使用。",
-  exportEngineFailed: "导出内核加载失败。请检查网络；若你是直接打开 index.html，请改用任意本地 HTTP 服务打开。",
+  exportEngineFailed: "导出内核加载失败。请检查网络后重试。",
   exportStartFailed: "一键导出启动失败，请重试，或改用 OBS / 系统录屏。",
   exportMuxFailed: "原音频封装失败，已回退为纯画面录制文件。",
   workflowHint:
@@ -89,6 +88,8 @@ const demo = {
 };
 
 const FFMPEG_CORE_BASE = "https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/umd";
+const EXPORT_RECORDING_MIME_TYPE = "video/webm;codecs=vp9";
+const EXPORT_START_TIMEOUT_MS = 1200;
 
 const state = {
   title: TEXT.defaultTitle,
@@ -110,7 +111,6 @@ const state = {
   recordedChunks: [],
   displayStream: null,
   shouldSaveExport: false,
-  recordingMimeType: "",
   exportBaseName: "",
   exportAudioLeadInMs: 0,
   pendingRecordingStartAc: null,
@@ -654,21 +654,15 @@ const clearPendingExportStartObservers = () => {
 const observeMediaRecorderStart = (mediaRecorder) => {
   const ac = new AbortController();
   const { signal } = ac;
-  let resolveStart;
-  let rejectStart;
-  let fallbackTimer = 0;
-  const promise = new Promise((resolve, reject) => {
-    resolveStart = resolve;
-    rejectStart = reject;
-  });
+  const { promise, resolve: resolveStart, reject: rejectStart } = Promise.withResolvers();
   promise.catch(() => {});
+  const fallbackSignal = AbortSignal.timeout(EXPORT_START_TIMEOUT_MS);
 
   let settled = false;
 
   const finalize = (callback) => {
     if (settled) return;
     settled = true;
-    clearTimeout(fallbackTimer);
     ac.abort();
     callback();
   };
@@ -678,17 +672,15 @@ const observeMediaRecorderStart = (mediaRecorder) => {
 
   mediaRecorder.addEventListener("start", handleStart, { signal });
   mediaRecorder.addEventListener("error", handleError, { signal });
-
-  fallbackTimer = window.setTimeout(() => {
+  fallbackSignal.addEventListener("abort", () => {
     if (mediaRecorder.state === "recording") {
       handleStart();
     }
-  }, 1200);
+  }, { once: true, signal });
 
   signal.addEventListener("abort", () => {
     if (!settled) {
       settled = true;
-      clearTimeout(fallbackTimer);
       rejectStart(new Error("MEDIA_RECORDER_START_CANCELLED"));
     }
   });
@@ -701,6 +693,7 @@ const observeAudioPlaybackStart = (audioElement) => {
   const { signal } = ac;
   const { promise, resolve: resolvePlayback, reject: rejectPlayback } = Promise.withResolvers();
   promise.catch(() => {});
+  const fallbackSignal = AbortSignal.timeout(EXPORT_START_TIMEOUT_MS);
 
   let settled = false;
 
@@ -718,9 +711,9 @@ const observeAudioPlaybackStart = (audioElement) => {
   audioElement.addEventListener("timeupdate", handleStart, { signal });
   audioElement.addEventListener("error", handleError, { signal });
 
-  setTimeout(() => {
+  fallbackSignal.addEventListener("abort", () => {
     if (!audioElement.paused) handleStart();
-  }, 1200);
+  }, { once: true, signal });
 
   signal.addEventListener("abort", () => {
     if (!settled) {
@@ -765,10 +758,11 @@ const getFfmpegClass = () => window.FFmpegWASM?.FFmpeg || null;
 
 const supportsInlineExport = () =>
   Boolean(navigator.mediaDevices?.getDisplayMedia) &&
-  typeof MediaRecorder !== "undefined" &&
+  typeof MediaRecorder === "function" &&
+  typeof Promise.withResolvers === "function" &&
+  typeof AbortSignal.timeout === "function" &&
+  Boolean(MediaRecorder.isTypeSupported?.(EXPORT_RECORDING_MIME_TYPE)) &&
   Boolean(getFfmpegClass());
-
-const isDirectFileMode = () => window.location.protocol === "file:";
 
 const createBlobUrlFromRemote = async (url, mimeType) => {
   const response = await fetch(url);
@@ -823,27 +817,9 @@ const updateExportUi = () => {
   updateLyricCalibrationUi();
 };
 
-const getSupportedRecordingMimeType = () => {
-  if (typeof MediaRecorder.isTypeSupported !== "function") {
-    return "";
-  }
-
-  const preferredMimeTypes = [
-    "video/webm;codecs=vp9",
-    "video/webm;codecs=vp8",
-    "video/webm"
-  ];
-
-  return preferredMimeTypes.find((mimeType) => MediaRecorder.isTypeSupported(mimeType)) || "";
-};
-
 const ensureFfmpeg = async () => {
   if (state.ffmpeg) {
     return state.ffmpeg;
-  }
-
-  if (isDirectFileMode()) {
-    throw new Error("EXPORT_LOCAL_SERVER_REQUIRED");
   }
 
   if (!supportsInlineExport()) {
@@ -913,7 +889,6 @@ const resetExportSession = () => {
   state.mediaRecorder = null;
   state.recordedChunks = [];
   state.shouldSaveExport = false;
-  state.recordingMimeType = "";
   state.exportBaseName = "";
   state.exportAudioLeadInMs = 0;
 };
@@ -1036,16 +1011,14 @@ const loadDemo = () => {
 
 };
 
-const handleDrop = (event) => {
+const handleDrop = async (event) => {
   event.preventDefault();
   document.body.classList.remove("drag-over");
   if (state.isExporting) return;
 
   const files = Array.from(event.dataTransfer?.files || []);
 
-  files.forEach((file) => {
-    void importDroppedFile(file);
-  });
+  await Promise.allSettled(files.map((file) => importDroppedFile(file)));
 
   if (!files.length) {
     const text = event.dataTransfer?.getData("text/plain");
@@ -1152,7 +1125,7 @@ const finalizeRecordedVideo = async () => {
   const requestedSave = state.shouldSaveExport;
   const hasRecordedChunks = state.recordedChunks.length > 0;
   const shouldSave = requestedSave && hasRecordedChunks;
-  const recordingMimeType = state.recordingMimeType || state.recordedChunks[0]?.type || "video/webm";
+  const recordingMimeType = state.recordedChunks[0]?.type || EXPORT_RECORDING_MIME_TYPE;
 
   if (!shouldSave) {
     state.isMuxing = false;
@@ -1245,14 +1218,8 @@ const startExporting = async () => {
     state.displayStream = videoStream;
     state.recordedChunks = [];
     state.shouldSaveExport = true;
-    state.recordingMimeType = getSupportedRecordingMimeType();
     state.exportAudioLeadInMs = 0;
-
-    const recorderOptions = state.recordingMimeType
-      ? { mimeType: state.recordingMimeType }
-      : undefined;
-
-    state.mediaRecorder = new MediaRecorder(videoStream, recorderOptions);
+    state.mediaRecorder = new MediaRecorder(videoStream, { mimeType: EXPORT_RECORDING_MIME_TYPE });
 
     state.mediaRecorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) {
@@ -1324,11 +1291,6 @@ const startExporting = async () => {
     if (err?.message === "EXPORT_UNSUPPORTED") {
       alert(TEXT.exportUnsupported);
       setExportStatus(TEXT.exportUnsupported);
-      return;
-    }
-    if (err?.message === "EXPORT_LOCAL_SERVER_REQUIRED") {
-      alert(TEXT.exportRequiresLocalServer);
-      setExportStatus(TEXT.exportRequiresLocalServer);
       return;
     }
     if (String(err?.message || "").startsWith("FFMPEG_ASSET_FETCH_FAILED")) {
