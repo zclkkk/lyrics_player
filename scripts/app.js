@@ -470,6 +470,58 @@ const setAudio = (url, file = null) => {
 
 };
 
+const createTrackedObjectUrl = (file) => {
+  const objectUrl = URL.createObjectURL(file);
+  state.objectUrls.push(objectUrl);
+  return objectUrl;
+};
+
+const importLyricsText = (text) => {
+  elements.lrcInput.value = text;
+  applyLyricsText(text);
+};
+
+const isLrcFile = (file) => {
+  const fileName = String(file?.name || "");
+  return fileName.toLowerCase().endsWith(".lrc") || file?.type === "text/plain";
+};
+
+const importCoverFile = (file) => {
+  if (!file || !file.type.startsWith("image/")) {
+    return false;
+  }
+
+  setCover(createTrackedObjectUrl(file));
+  return true;
+};
+
+const importAudioFile = (file) => {
+  if (!file || !file.type.startsWith("audio/")) {
+    return false;
+  }
+
+  setAudio(createTrackedObjectUrl(file), file);
+  setExportStatus(TEXT.exportIdleHint);
+  return true;
+};
+
+const importLrcFile = async (file) => {
+  if (!file || !isLrcFile(file)) {
+    return false;
+  }
+
+  importLyricsText(await file.text());
+  return true;
+};
+
+const importDroppedFile = async (file) => {
+  if (importCoverFile(file) || importAudioFile(file)) {
+    return true;
+  }
+
+  return importLrcFile(file);
+};
+
 const updateLyrics = (force = false) => {
   const lyricLines = state.lyricLineElements;
 
@@ -923,29 +975,14 @@ const handleDrop = (event) => {
 
   const files = Array.from(event.dataTransfer?.files || []);
 
-  for (const file of files) {
-    if (file.type.startsWith("image/")) {
-      const objectUrl = URL.createObjectURL(file);
-      state.objectUrls.push(objectUrl);
-      setCover(objectUrl);
-    } else if (file.type.startsWith("audio/")) {
-      const objectUrl = URL.createObjectURL(file);
-      state.objectUrls.push(objectUrl);
-      setAudio(objectUrl, file);
-      setExportStatus(TEXT.exportIdleHint);
-    } else if (file.name.endsWith(".lrc") || file.type === "text/plain") {
-      file.text().then((text) => {
-        elements.lrcInput.value = text;
-        applyLyricsText(text);
-      });
-    }
-  }
+  files.forEach((file) => {
+    void importDroppedFile(file);
+  });
 
   if (!files.length) {
     const text = event.dataTransfer?.getData("text/plain");
     if (text) {
-      elements.lrcInput.value = text;
-      applyLyricsText(text);
+      importLyricsText(text);
     }
   }
 };
@@ -967,27 +1004,13 @@ const handleLyricsInput = debounce((event) => {
 const handleCoverUpload = (event) => {
   const file = event.target.files?.[0];
 
-  if (!file) {
-    return;
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-  state.objectUrls.push(objectUrl);
-  setCover(objectUrl);
+  importCoverFile(file);
 };
 
 const handleAudioUpload = (event) => {
   const file = event.target.files?.[0];
 
-  if (!file) {
-    return;
-  }
-
-  const objectUrl = URL.createObjectURL(file);
-  state.objectUrls.push(objectUrl);
-  setAudio(objectUrl, file);
-  setExportStatus(TEXT.exportIdleHint);
-
+  importAudioFile(file);
 };
 
 const handleFontScale = (event) => {
