@@ -732,16 +732,37 @@ const updateLyrics = (force = false) => {
     }
   }
 
-  if (!force && activeIndex === state.currentIndex) {
+  const previousActiveIndex = state.currentIndex;
+
+  if (!force && activeIndex === previousActiveIndex) {
     return;
   }
 
   state.currentIndex = activeIndex;
 
-  lyricLines.forEach((lineElement, index) => {
+  const indicesToUpdate = new Set([
+    previousActiveIndex - 1,
+    previousActiveIndex,
+    previousActiveIndex + 1,
+    activeIndex - 1,
+    activeIndex,
+    activeIndex + 1
+  ]);
+
+  for (const index of indicesToUpdate) {
+    if (index < 0 || index >= lyricLines.length) {
+      continue;
+    }
+
+    const lineElement = lyricLines[index];
+
+    if (!lineElement) {
+      continue;
+    }
+
     lineElement.classList.toggle("active", index === activeIndex);
     lineElement.classList.toggle("near", Math.abs(index - activeIndex) <= 1 && index !== activeIndex);
-  });
+  }
 
   const activeLine = activeIndex >= 0 ? lyricLines[activeIndex] : lyricLines[0];
 
