@@ -633,6 +633,10 @@ body.recording-mode .progress::-moz-range-thumb {
   font-weight: 700;
 }
 
+.btn.export-btn {
+  color: #fff;
+}
+
 .grid {
   display: grid;
   gap: 12px;
