@@ -1,82 +1,25 @@
-import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { toBlobURL } from "@ffmpeg/util";
+import type { FFmpeg } from "@ffmpeg/ffmpeg";
 
 import { applyAccent, getDominantColors } from "./color";
+import {
+  EXPORT_RECORDING_MIME_TYPE,
+  downloadBlob,
+  loadFfmpegCore,
+  muxRecordedVideo,
+  observeAudioPlaybackStart,
+  observeMediaRecorderStart,
+  supportsInlineExport,
+} from "./export";
 import { parseLrc } from "./lrc";
+import { TEXT } from "./text";
 import type { LyricLine } from "./types";
 import {
   debounce,
   formatLrcTimestamp,
   formatSignedMilliseconds,
   formatTime,
-  getFileExtension,
-  getLyricPreview
+  getLyricPreview,
 } from "./utils";
-
-const TEXT = {
-  pageTitle: "AppleMusic 风格歌词录制页",
-  desktopOnlyKicker: "Desktop Only",
-  desktopOnlyTitle: "请使用桌面端打开",
-  desktopOnlyDescription: "这个工具现在只为桌面录制工作流设计。请把窗口放宽到至少 1100px，或直接在桌面浏览器中使用。",
-  panelButton: "面板",
-  recordingMode: "录制模式",
-  exitRecordingMode: "退出录制模式",
-  shortcuts: "空格 播放 / 暂停 · R 录制模式 · H 隐藏面板",
-  panelTitle: "录制控制台",
-  loadDemo: "加载示例",
-  resetView: "回到开头",
-  songTitleLabel: "歌名",
-  artistLabel: "歌手 / 署名",
-  coverLabel: "封面",
-  coverPicker: "选择封面图片",
-  audioLabel: "音频",
-  audioPicker: "选择音频文件",
-  lrcLabel: "LRC 歌词",
-  lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
-  lrcCalibrationLabel: "歌词校准",
-  lrcCalibrationHint: "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。",
-  lrcOffsetLabel: "整体偏移",
-  lrcNudgeBack: "整体 -100 ms",
-  lrcNudgeForward: "整体 +100 ms",
-  lrcAlignCurrent: "从当前句起对齐",
-  lrcReset: "重置校准",
-  lrcCalibrationEmpty: "当前 LRC 没有可校准的时间标签。",
-  fontScaleLabel: "歌词字号",
-  coverScaleLabel: "封面尺寸",
-  bgDarknessLabel: "背景深浅",
-  bgBlurLabel: "模糊强度",
-  bgAnimateLabel: "动态背景呼吸效果",
-  playPause: "播放 / 暂停",
-  exportButton: "● [BETA]导出视频（保留原音频）",
-  exportStopButton: "■ 结束录制并封装",
-  exportPreparingButton: "正在准备导出引擎…",
-  exportMuxingButton: "正在封装原音频…",
-  exportIdleHint: "首次导出会联网加载 FFmpeg 内核（约 31 MB）。",
-  exportPreparingHint: "正在联网加载 FFmpeg 内核，首次可能需要几十秒，请稍候。",
-  exportPickTabHint: "请在浏览器弹窗中选择当前标签页，确认后开始录制。",
-  exportRecordingHint: "正在录制画面；录制结束后会自动把你导入的原始音频封装进 MKV。",
-  exportMuxingHint: "正在把录制画面与原始音频封装到同一个 MKV 文件中。",
-  exportDoneHint: "导出完成，已下载包含原始音频的 MKV 文件。",
-  exportCancelledHint: "已取消导出。",
-  exportEmptyCaptureHint: "录制结束过快，未捕获到任何画面，请重试。",
-  exportFallbackHint: "原音频封装失败，已回退下载纯画面录制文件。",
-  exportRequiresAudio: "请先导入音频文件！",
-  exportRequiresOriginalAudio: "请通过文件选择或拖拽导入原始音频后再导出，这样才能保留原音频。",
-  exportUnsupported: "当前浏览器不支持网页录屏导出，请改用新版 Chrome / Edge 或 OBS。",
-  exportEngineFailed: "导出内核加载失败。请检查网络后重试。",
-  exportStartFailed: "一键导出启动失败，请重试，或改用 OBS / 系统录屏。",
-  exportMuxFailed: "原音频封装失败，已回退为纯画面录制文件。",
-  workflowHint:
-    "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
-  nowPlayingEyebrow: "Now Playing",
-  coverAlt: "歌曲封面",
-  defaultTitle: "你的翻唱作品",
-  defaultArtist: "你的名字 / 原唱信息",
-  untitledSong: "未命名作品",
-  unknownArtist: "未知歌手",
-  demoTitle: "夜空中最亮的星（翻唱）",
-  demoArtist: "你的名字 · Cover"
-} as const;
 
 const demo = {
   title: TEXT.demoTitle,
@@ -99,17 +42,76 @@ const demo = {
 [01:19.60]每当我找不到存在的意义
 [01:26.00]每当我迷失在黑夜里
 [01:31.40]夜空中最亮的星
-[01:36.00]请指引我靠近你`
-} as const satisfies {
-  title: string;
-  artist: string;
-  lrc: string;
+[01:36.00]请指引我靠近你`,
+} as const;
+
+const getEl = <T extends Element>(sel: string, type: abstract new (...args: any[]) => T): T => {
+  const found = document.querySelector(sel);
+  if (!found) throw new Error(`Missing: ${sel}`);
+  if (!(found instanceof type)) throw new TypeError(`${sel} is not ${type.name}`);
+  return found;
 };
 
-const FFMPEG_CORE_VERSION = "0.12.15";
-const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`;
-const EXPORT_RECORDING_MIME_TYPE = "video/webm;codecs=vp9";
-const EXPORT_START_TIMEOUT_MS = 1200;
+const el = {
+  app: getEl("#app", HTMLDivElement),
+  audio: getEl("#audio", HTMLAudioElement),
+  desktopOnlyKicker: getEl("#desktopOnlyKicker", HTMLDivElement),
+  desktopOnlyTitle: getEl("#desktopOnlyTitle", HTMLHeadingElement),
+  desktopOnlyDescription: getEl("#desktopOnlyDescription", HTMLParagraphElement),
+  exportVideoBtn: getEl("#exportVideoBtn", HTMLButtonElement),
+  exportStatus: getEl("#exportStatus", HTMLDivElement),
+  cover: getEl("#cover", HTMLImageElement),
+  eyebrow: getEl("#eyebrow", HTMLDivElement),
+  title: getEl("#title", HTMLHeadingElement),
+  artist: getEl("#artist", HTMLDivElement),
+  lyricsViewport: getEl("#lyricsViewport", HTMLDivElement),
+  lyricsTrack: getEl("#lyricsTrack", HTMLDivElement),
+  currentTime: getEl("#currentTime", HTMLDivElement),
+  duration: getEl("#duration", HTMLDivElement),
+  progress: getEl("#progress", HTMLInputElement),
+  panel: getEl("#panel", HTMLDialogElement),
+  titleInput: getEl("#titleInput", HTMLInputElement),
+  artistInput: getEl("#artistInput", HTMLInputElement),
+  lrcInput: getEl("#lrcInput", HTMLTextAreaElement),
+  coverInput: getEl("#coverInput", HTMLInputElement),
+  audioInput: getEl("#audioInput", HTMLInputElement),
+  fontScaleInput: getEl("#fontScaleInput", HTMLInputElement),
+  coverScaleInput: getEl("#coverScaleInput", HTMLInputElement),
+  playBtn: getEl("#playBtn", HTMLButtonElement),
+  togglePanelBtn: getEl("#togglePanelBtn", HTMLButtonElement),
+  toggleRecordingBtn: getEl("#toggleRecordingBtn", HTMLButtonElement),
+  loadDemoBtn: getEl("#loadDemoBtn", HTMLButtonElement),
+  resetViewBtn: getEl("#resetViewBtn", HTMLButtonElement),
+  shortcutsBadge: getEl("#shortcutsBadge", HTMLDivElement),
+  panelTitle: getEl("#panelTitle", HTMLDivElement),
+  songTitleLabel: getEl("#songTitleLabel", HTMLLabelElement),
+  artistLabel: getEl("#artistLabel", HTMLLabelElement),
+  coverLabel: getEl("#coverLabel", HTMLLabelElement),
+  coverPickerLabel: getEl("#coverPickerLabel", HTMLLabelElement),
+  audioLabel: getEl("#audioLabel", HTMLLabelElement),
+  audioPickerLabel: getEl("#audioPickerLabel", HTMLLabelElement),
+  lrcLabel: getEl("#lrcLabel", HTMLLabelElement),
+  lrcCalibrationLabel: getEl("#lrcCalibrationLabel", HTMLLabelElement),
+  lrcCalibrationHint: getEl("#lrcCalibrationHint", HTMLDivElement),
+  lrcOffsetLabel: getEl("#lrcOffsetLabel", HTMLLabelElement),
+  lrcOffsetInput: getEl("#lrcOffsetInput", HTMLInputElement),
+  lrcOffsetValue: getEl("#lrcOffsetValue", HTMLDivElement),
+  nudgeLrcBackBtn: getEl("#nudgeLrcBackBtn", HTMLButtonElement),
+  nudgeLrcForwardBtn: getEl("#nudgeLrcForwardBtn", HTMLButtonElement),
+  alignCurrentLyricBtn: getEl("#alignCurrentLyricBtn", HTMLButtonElement),
+  resetLrcCalibrationBtn: getEl("#resetLrcCalibrationBtn", HTMLButtonElement),
+  lrcCalibrationStatus: getEl("#lrcCalibrationStatus", HTMLDivElement),
+  fontScaleLabel: getEl("#fontScaleLabel", HTMLLabelElement),
+  coverScaleLabel: getEl("#coverScaleLabel", HTMLLabelElement),
+  bgDarknessInput: getEl("#bgDarknessInput", HTMLInputElement),
+  bgDarknessLabel: getEl("#bgDarknessLabel", HTMLLabelElement),
+  bgBlurInput: getEl("#bgBlurInput", HTMLInputElement),
+  bgBlurLabel: getEl("#bgBlurLabel", HTMLLabelElement),
+  bgAnimateInput: getEl("#bgAnimateInput", HTMLInputElement),
+  bgAnimateLabel: getEl("#bgAnimateLabel", HTMLSpanElement),
+  workflowHint: getEl("#workflowHint", HTMLDivElement),
+  bg: getEl(".bg", HTMLDivElement),
+} as const;
 
 interface AppState {
   title: string;
@@ -148,11 +150,6 @@ interface AppState {
   lastDurationText: string;
 }
 
-type ElementConstructor<T extends Element> = Function & {
-  new(): T;
-  readonly name: string;
-};
-
 const state: AppState = {
   title: TEXT.defaultTitle,
   artist: TEXT.defaultArtist,
@@ -187,149 +184,63 @@ const state: AppState = {
   lastProgressPercent: "",
   lastProgressValue: "",
   lastTimeText: "",
-  lastDurationText: ""
+  lastDurationText: "",
 };
 
-const getRequiredElement = <T extends Element>(id: string, type: ElementConstructor<T>) => {
-  const element = document.getElementById(id);
+const revokeAll = (urls: string[]) => { for (const u of urls) URL.revokeObjectURL(u); };
 
-  if (!element) {
-    throw new Error(`Missing required element: #${id}`);
-  }
-
-  if (!(element instanceof type)) {
-    throw new TypeError(`Expected #${id} to be a ${type.name}, got <${element.tagName.toLowerCase()}>.`);
-  }
-
-  return element;
-};
-
-const getRequiredQuery = <T extends Element>(selector: string, type: ElementConstructor<T>) => {
-  const element = document.querySelector(selector);
-
-  if (!element) {
-    throw new Error(`Missing required element: ${selector}`);
-  }
-
-  if (!(element instanceof type)) {
-    throw new TypeError(`Expected ${selector} to be a ${type.name}, got <${element.tagName.toLowerCase()}>.`);
-  }
-
-  return element;
-};
-
-const elements = {
-  app: getRequiredElement("app", HTMLDivElement),
-  audio: getRequiredElement("audio", HTMLAudioElement),
-  desktopOnlyKicker: getRequiredElement("desktopOnlyKicker", HTMLDivElement),
-  desktopOnlyTitle: getRequiredElement("desktopOnlyTitle", HTMLHeadingElement),
-  desktopOnlyDescription: getRequiredElement("desktopOnlyDescription", HTMLParagraphElement),
-  exportVideoBtn: getRequiredElement("exportVideoBtn", HTMLButtonElement),
-  exportStatus: getRequiredElement("exportStatus", HTMLDivElement),
-  cover: getRequiredElement("cover", HTMLImageElement),
-  eyebrow: getRequiredElement("eyebrow", HTMLDivElement),
-  title: getRequiredElement("title", HTMLHeadingElement),
-  artist: getRequiredElement("artist", HTMLDivElement),
-  lyricsViewport: getRequiredElement("lyricsViewport", HTMLDivElement),
-  lyricsTrack: getRequiredElement("lyricsTrack", HTMLDivElement),
-  currentTime: getRequiredElement("currentTime", HTMLDivElement),
-  duration: getRequiredElement("duration", HTMLDivElement),
-  progress: getRequiredElement("progress", HTMLInputElement),
-  panel: getRequiredElement("panel", HTMLDialogElement),
-  titleInput: getRequiredElement("titleInput", HTMLInputElement),
-  artistInput: getRequiredElement("artistInput", HTMLInputElement),
-  lrcInput: getRequiredElement("lrcInput", HTMLTextAreaElement),
-  coverInput: getRequiredElement("coverInput", HTMLInputElement),
-  audioInput: getRequiredElement("audioInput", HTMLInputElement),
-  fontScaleInput: getRequiredElement("fontScaleInput", HTMLInputElement),
-  coverScaleInput: getRequiredElement("coverScaleInput", HTMLInputElement),
-  playBtn: getRequiredElement("playBtn", HTMLButtonElement),
-  togglePanelBtn: getRequiredElement("togglePanelBtn", HTMLButtonElement),
-  toggleRecordingBtn: getRequiredElement("toggleRecordingBtn", HTMLButtonElement),
-  loadDemoBtn: getRequiredElement("loadDemoBtn", HTMLButtonElement),
-  resetViewBtn: getRequiredElement("resetViewBtn", HTMLButtonElement),
-  shortcutsBadge: getRequiredElement("shortcutsBadge", HTMLDivElement),
-  panelTitle: getRequiredElement("panelTitle", HTMLDivElement),
-  songTitleLabel: getRequiredElement("songTitleLabel", HTMLLabelElement),
-  artistLabel: getRequiredElement("artistLabel", HTMLLabelElement),
-  coverLabel: getRequiredElement("coverLabel", HTMLLabelElement),
-  coverPickerLabel: getRequiredElement("coverPickerLabel", HTMLLabelElement),
-  audioLabel: getRequiredElement("audioLabel", HTMLLabelElement),
-  audioPickerLabel: getRequiredElement("audioPickerLabel", HTMLLabelElement),
-  lrcLabel: getRequiredElement("lrcLabel", HTMLLabelElement),
-  lrcCalibrationLabel: getRequiredElement("lrcCalibrationLabel", HTMLLabelElement),
-  lrcCalibrationHint: getRequiredElement("lrcCalibrationHint", HTMLDivElement),
-  lrcOffsetLabel: getRequiredElement("lrcOffsetLabel", HTMLLabelElement),
-  lrcOffsetInput: getRequiredElement("lrcOffsetInput", HTMLInputElement),
-  lrcOffsetValue: getRequiredElement("lrcOffsetValue", HTMLDivElement),
-  nudgeLrcBackBtn: getRequiredElement("nudgeLrcBackBtn", HTMLButtonElement),
-  nudgeLrcForwardBtn: getRequiredElement("nudgeLrcForwardBtn", HTMLButtonElement),
-  alignCurrentLyricBtn: getRequiredElement("alignCurrentLyricBtn", HTMLButtonElement),
-  resetLrcCalibrationBtn: getRequiredElement("resetLrcCalibrationBtn", HTMLButtonElement),
-  lrcCalibrationStatus: getRequiredElement("lrcCalibrationStatus", HTMLDivElement),
-  fontScaleLabel: getRequiredElement("fontScaleLabel", HTMLLabelElement),
-  coverScaleLabel: getRequiredElement("coverScaleLabel", HTMLLabelElement),
-  bgDarknessInput: getRequiredElement("bgDarknessInput", HTMLInputElement),
-  bgDarknessLabel: getRequiredElement("bgDarknessLabel", HTMLLabelElement),
-  bgBlurInput: getRequiredElement("bgBlurInput", HTMLInputElement),
-  bgBlurLabel: getRequiredElement("bgBlurLabel", HTMLLabelElement),
-  bgAnimateInput: getRequiredElement("bgAnimateInput", HTMLInputElement),
-  bgAnimateLabel: getRequiredElement("bgAnimateLabel", HTMLSpanElement),
-  workflowHint: getRequiredElement("workflowHint", HTMLDivElement),
-  bg: getRequiredQuery(".bg", HTMLDivElement)
-} as const;
-
-const cloneLyrics = (lyrics: LyricLine[]) => structuredClone(lyrics) as LyricLine[];
+const isExportBusy = () => state.isExporting || state.isMuxing || !!state.ffmpegLoadPromise;
 
 const setExportStatus = (text: string) => {
-  elements.exportStatus.textContent = text;
+  el.exportStatus.textContent = text;
 };
+
+const staticTextMap: [keyof typeof el, keyof typeof TEXT][] = [
+  ["desktopOnlyKicker", "desktopOnlyKicker"],
+  ["desktopOnlyTitle", "desktopOnlyTitle"],
+  ["desktopOnlyDescription", "desktopOnlyDescription"],
+  ["togglePanelBtn", "panelButton"],
+  ["toggleRecordingBtn", "recordingMode"],
+  ["shortcutsBadge", "shortcuts"],
+  ["panelTitle", "panelTitle"],
+  ["loadDemoBtn", "loadDemo"],
+  ["resetViewBtn", "resetView"],
+  ["songTitleLabel", "songTitleLabel"],
+  ["artistLabel", "artistLabel"],
+  ["coverLabel", "coverLabel"],
+  ["coverPickerLabel", "coverPicker"],
+  ["audioLabel", "audioLabel"],
+  ["audioPickerLabel", "audioPicker"],
+  ["lrcLabel", "lrcLabel"],
+  ["lrcCalibrationLabel", "lrcCalibrationLabel"],
+  ["lrcCalibrationHint", "lrcCalibrationHint"],
+  ["lrcOffsetLabel", "lrcOffsetLabel"],
+  ["nudgeLrcBackBtn", "lrcNudgeBack"],
+  ["nudgeLrcForwardBtn", "lrcNudgeForward"],
+  ["alignCurrentLyricBtn", "lrcAlignCurrent"],
+  ["resetLrcCalibrationBtn", "lrcReset"],
+  ["fontScaleLabel", "fontScaleLabel"],
+  ["coverScaleLabel", "coverScaleLabel"],
+  ["bgDarknessLabel", "bgDarknessLabel"],
+  ["bgBlurLabel", "bgBlurLabel"],
+  ["bgAnimateLabel", "bgAnimateLabel"],
+  ["playBtn", "playPause"],
+  ["exportVideoBtn", "exportButton"],
+  ["workflowHint", "workflowHint"],
+  ["eyebrow", "nowPlayingEyebrow"],
+  ["lrcCalibrationStatus", "lrcCalibrationEmpty"],
+];
 
 const applyStaticText = () => {
   document.title = TEXT.pageTitle;
-  elements.desktopOnlyKicker.textContent = TEXT.desktopOnlyKicker;
-  elements.desktopOnlyTitle.textContent = TEXT.desktopOnlyTitle;
-  elements.desktopOnlyDescription.textContent = TEXT.desktopOnlyDescription;
-  elements.togglePanelBtn.textContent = TEXT.panelButton;
-  elements.toggleRecordingBtn.textContent = TEXT.recordingMode;
-  elements.shortcutsBadge.textContent = TEXT.shortcuts;
-  elements.panelTitle.textContent = TEXT.panelTitle;
-  elements.loadDemoBtn.textContent = TEXT.loadDemo;
-  elements.resetViewBtn.textContent = TEXT.resetView;
-  elements.songTitleLabel.textContent = TEXT.songTitleLabel;
-  elements.artistLabel.textContent = TEXT.artistLabel;
-  elements.coverLabel.textContent = TEXT.coverLabel;
-  elements.coverPickerLabel.textContent = TEXT.coverPicker;
-  elements.audioLabel.textContent = TEXT.audioLabel;
-  elements.audioPickerLabel.textContent = TEXT.audioPicker;
-  elements.lrcLabel.textContent = TEXT.lrcLabel;
-  elements.lrcInput.placeholder = TEXT.lrcPlaceholder;
-  elements.lrcCalibrationLabel.textContent = TEXT.lrcCalibrationLabel;
-  elements.lrcCalibrationHint.textContent = TEXT.lrcCalibrationHint;
-  elements.lrcOffsetLabel.textContent = TEXT.lrcOffsetLabel;
-  elements.nudgeLrcBackBtn.textContent = TEXT.lrcNudgeBack;
-  elements.nudgeLrcForwardBtn.textContent = TEXT.lrcNudgeForward;
-  elements.alignCurrentLyricBtn.textContent = TEXT.lrcAlignCurrent;
-  elements.resetLrcCalibrationBtn.textContent = TEXT.lrcReset;
-  elements.fontScaleLabel.textContent = TEXT.fontScaleLabel;
-  elements.coverScaleLabel.textContent = TEXT.coverScaleLabel;
-  elements.bgDarknessLabel.textContent = TEXT.bgDarknessLabel;
-  elements.bgBlurLabel.textContent = TEXT.bgBlurLabel;
-  elements.bgAnimateLabel.textContent = TEXT.bgAnimateLabel;
-  elements.playBtn.textContent = TEXT.playPause;
-  elements.exportVideoBtn.textContent = TEXT.exportButton;
-  elements.workflowHint.textContent = TEXT.workflowHint;
-  elements.eyebrow.textContent = TEXT.nowPlayingEyebrow;
-  elements.cover.alt = TEXT.coverAlt;
-  elements.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
+  for (const [k, t] of staticTextMap) el[k].textContent = TEXT[t];
+  el.lrcInput.placeholder = TEXT.lrcPlaceholder;
+  el.cover.alt = TEXT.coverAlt;
   setExportStatus(TEXT.exportIdleHint);
 };
 
 const revokeObjectUrls = () => {
-  for (const url of state.objectUrls) {
-    URL.revokeObjectURL(url);
-  }
-
+  revokeAll(state.objectUrls);
   state.objectUrls = [];
 };
 
@@ -343,10 +254,7 @@ const revokeTrackedObjectUrl = (url: string) => {
 };
 
 const revokeFfmpegAssetUrls = () => {
-  for (const url of state.ffmpegAssetUrls) {
-    URL.revokeObjectURL(url);
-  }
-
+  revokeAll(state.ffmpegAssetUrls);
   state.ffmpegAssetUrls = [];
 };
 
@@ -357,8 +265,8 @@ const createTrackedObjectUrl = (file: Blob) => {
 };
 
 const applyLyricsData = (lyrics: LyricLine[]) => {
-  state.originalLyrics = cloneLyrics(lyrics);
-  state.lyrics = cloneLyrics(lyrics);
+  state.originalLyrics = structuredClone(lyrics);
+  state.lyrics = structuredClone(lyrics);
   state.lyricsGlobalOffsetMs = 0;
   state.currentIndex = -1;
 };
@@ -390,9 +298,9 @@ const getCalibrationAnchorIndex = () => {
     }
   }
 
-  const currentTime = elements.audio.currentTime || 0;
+  const currentTime = el.audio.currentTime || 0;
 
-  for (let index = 0; index < state.lyrics.length; index += 1) {
+  for (let index = 0; index < state.lyrics.length; ++index) {
     const line = state.lyrics[index];
 
     if (!line || !Number.isFinite(line.time)) {
@@ -404,7 +312,7 @@ const getCalibrationAnchorIndex = () => {
     }
   }
 
-  for (let index = state.lyrics.length - 1; index >= 0; index -= 1) {
+  for (let index = state.lyrics.length - 1; index >= 0; --index) {
     const line = state.lyrics[index];
 
     if (line && Number.isFinite(line.time)) {
@@ -415,9 +323,7 @@ const getCalibrationAnchorIndex = () => {
   return -1;
 };
 
-const isLyricCalibrationLocked = () => (
-  state.isExporting || state.isMuxing || Boolean(state.ffmpegLoadPromise)
-);
+const isLyricCalibrationLocked = () => isExportBusy();
 
 const updateLyricCalibrationUi = () => {
   const lyricsValidationMessage = getLyricsValidationMessage();
@@ -426,64 +332,64 @@ const updateLyricCalibrationUi = () => {
   const anchorLine = anchorIndex >= 0 ? state.lyrics[anchorIndex] : undefined;
   const calibrationLocked = isLyricCalibrationLocked();
 
-  elements.lrcOffsetInput.disabled = !hasTimedLyrics || calibrationLocked;
-  elements.nudgeLrcBackBtn.disabled = !hasTimedLyrics || calibrationLocked;
-  elements.nudgeLrcForwardBtn.disabled = !hasTimedLyrics || calibrationLocked;
-  elements.alignCurrentLyricBtn.disabled = !anchorLine || calibrationLocked;
-  elements.resetLrcCalibrationBtn.disabled = !hasTimedLyrics || calibrationLocked;
+  el.lrcOffsetInput.disabled = !hasTimedLyrics || calibrationLocked;
+  el.nudgeLrcBackBtn.disabled = !hasTimedLyrics || calibrationLocked;
+  el.nudgeLrcForwardBtn.disabled = !hasTimedLyrics || calibrationLocked;
+  el.alignCurrentLyricBtn.disabled = !anchorLine || calibrationLocked;
+  el.resetLrcCalibrationBtn.disabled = !hasTimedLyrics || calibrationLocked;
 
-  elements.lrcOffsetInput.value = String(state.lyricsGlobalOffsetMs);
-  elements.lrcOffsetValue.textContent = formatSignedMilliseconds(state.lyricsGlobalOffsetMs);
+  el.lrcOffsetInput.value = String(state.lyricsGlobalOffsetMs);
+  el.lrcOffsetValue.textContent = formatSignedMilliseconds(state.lyricsGlobalOffsetMs);
 
   if (lyricsValidationMessage) {
-    elements.lrcCalibrationStatus.textContent = lyricsValidationMessage;
+    el.lrcCalibrationStatus.textContent = lyricsValidationMessage;
     return;
   }
 
   if (!hasTimedLyrics) {
-    elements.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
+    el.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
     return;
   }
 
   if (!anchorLine) {
-    elements.lrcCalibrationStatus.textContent = `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 先播放到要校准的那一句。`;
+    el.lrcCalibrationStatus.textContent = `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 先播放到要校准的那一句。`;
     return;
   }
 
-  elements.lrcCalibrationStatus.textContent =
+  el.lrcCalibrationStatus.textContent =
     `整体偏移 ${formatSignedMilliseconds(state.lyricsGlobalOffsetMs)} · 对齐句：${getLyricPreview(anchorLine.text)} · 时间 ${formatLrcTimestamp(getEffectiveLyricTime(anchorLine.time))}`;
 };
 
 const updateProgress = () => {
-  const currentTime = elements.audio.currentTime || 0;
-  const duration = elements.audio.duration || 0;
+  const currentTime = el.audio.currentTime || 0;
+  const duration = el.audio.duration || 0;
   const progressRatio = duration > 0 ? currentTime / duration : 0;
   const progressPercent = `${progressRatio * 100}%`;
 
   if (state.lastProgressPercent !== progressPercent) {
     state.lastProgressPercent = progressPercent;
-    elements.app.style.setProperty("--progress", progressPercent);
+    el.app.style.setProperty("--progress", progressPercent);
   }
 
-  const progressValue = String(Math.round(progressRatio * Number(elements.progress.max)));
+  const progressValue = String(Math.round(progressRatio * Number(el.progress.max)));
 
   if (state.lastProgressValue !== progressValue) {
     state.lastProgressValue = progressValue;
-    elements.progress.value = progressValue;
+    el.progress.value = progressValue;
   }
 
   const timeText = formatTime(currentTime);
 
   if (state.lastTimeText !== timeText) {
     state.lastTimeText = timeText;
-    elements.currentTime.textContent = timeText;
+    el.currentTime.textContent = timeText;
   }
 
   const durationText = formatTime(duration);
 
   if (state.lastDurationText !== durationText) {
     state.lastDurationText = durationText;
-    elements.duration.textContent = durationText;
+    el.duration.textContent = durationText;
   }
 
   updateLyrics();
@@ -491,31 +397,19 @@ const updateProgress = () => {
 
 const syncLyricsUi = ({ rerender = false }: { rerender?: boolean } = {}) => {
   if (rerender) {
-    elements.lyricsTrack.replaceChildren();
+    el.lyricsTrack.replaceChildren();
 
-    state.lyrics.forEach((line, index) => {
-      const lineElement = document.createElement("div");
-      const hasText = Boolean((line.text || "").trim());
-      const lineClassNames = ["lyric-line"];
+    for (const [i, line] of state.lyrics.entries()) {
+      const div = document.createElement("div");
+      div.classList.add("lyric-line");
+      if (!(line.text || "").trim()) div.classList.add("empty");
+      if (line.isError) div.classList.add("error");
+      div.textContent = line.text || " ";
+      div.dataset.index = String(i);
+      el.lyricsTrack.appendChild(div);
+    }
 
-      if (!hasText) {
-        lineClassNames.push("empty");
-      }
-
-      if (line.isError) {
-        lineClassNames.push("error");
-      }
-
-      lineElement.className = lineClassNames.join(" ");
-      lineElement.textContent = line.text || " ";
-      lineElement.dataset.index = String(index);
-      elements.lyricsTrack.appendChild(lineElement);
-    });
-
-    state.lyricLineElements = Array.from(
-      elements.lyricsTrack.children,
-      (child) => child as HTMLDivElement
-    );
+    state.lyricLineElements = [...el.lyricsTrack.children] as HTMLDivElement[];
   }
 
   updateProgress();
@@ -542,7 +436,7 @@ const shiftLyricsFromIndex = (startIndex: number, deltaSeconds: number) => {
   let appliedDelta = deltaSeconds;
   let minimumDelta = -anchorLine.time;
 
-  for (let index = startIndex - 1; index >= 0; index -= 1) {
+  for (let index = startIndex - 1; index >= 0; --index) {
     const previousLine = state.lyrics[index];
 
     if (!previousLine || !Number.isFinite(previousLine.time)) {
@@ -586,29 +480,29 @@ const alignLyricsFromCurrentLine = () => {
     return;
   }
 
-  const currentTime = elements.audio.currentTime || 0;
+  const currentTime = el.audio.currentTime || 0;
   const displayedTime = getEffectiveLyricTime(anchorLine.time);
 
   shiftLyricsFromIndex(anchorIndex, currentTime - displayedTime);
 };
 
 const resetLyricsCalibration = () => {
-  state.lyrics = cloneLyrics(state.originalLyrics);
+  state.lyrics = structuredClone(state.originalLyrics);
   state.lyricsGlobalOffsetMs = 0;
   state.currentIndex = -1;
   syncLyricsUi({ rerender: true });
 };
 
 const syncTextInputs = () => {
-  elements.title.textContent = state.title || TEXT.untitledSong;
-  elements.artist.textContent = state.artist || TEXT.unknownArtist;
+  el.title.textContent = state.title || TEXT.untitledSong;
+  el.artist.textContent = state.artist || TEXT.unknownArtist;
 
-  if (elements.titleInput.value !== state.title) {
-    elements.titleInput.value = state.title;
+  if (el.titleInput.value !== state.title) {
+    el.titleInput.value = state.title;
   }
 
-  if (elements.artistInput.value !== state.artist) {
-    elements.artistInput.value = state.artist;
+  if (el.artistInput.value !== state.artist) {
+    el.artistInput.value = state.artist;
   }
 };
 
@@ -619,7 +513,6 @@ const recalcCoverColor = () => {
 
   const coverUrl = state.coverUrl;
   const probeImage = new Image();
-  probeImage.crossOrigin = "anonymous";
 
   probeImage.addEventListener("load", () => {
     if (state.coverUrl !== coverUrl) {
@@ -643,10 +536,10 @@ const setCover = (url: string) => {
   }
 
   state.coverUrl = url;
-  elements.cover.src = url;
+  el.cover.src = url;
 
   const cssUrl = url.replace(/[\\"'()]/g, (char) => `\\${char}`);
-  elements.app.style.setProperty("--bg-image", `url("${cssUrl}")`);
+  el.app.style.setProperty("--bg-image", `url("${cssUrl}")`);
   recalcCoverColor();
 };
 
@@ -657,12 +550,12 @@ const setAudio = (url: string, file: File | null = null) => {
 
   state.audioUrl = url;
   state.audioFile = file;
-  elements.audio.src = url;
-  elements.audio.load();
+  el.audio.src = url;
+  el.audio.load();
 };
 
 const importLyricsText = (text: string) => {
-  elements.lrcInput.value = text;
+  el.lrcInput.value = text;
   applyLyricsText(text);
 };
 
@@ -716,9 +609,9 @@ const updateLyrics = (force = false) => {
   }
 
   let activeIndex = -1;
-  const currentTime = elements.audio.currentTime || 0;
+  const currentTime = el.audio.currentTime || 0;
 
-  for (let index = 0; index < state.lyrics.length; index += 1) {
+  for (let index = 0; index < state.lyrics.length; ++index) {
     const line = state.lyrics[index];
 
     if (!line) {
@@ -767,10 +660,10 @@ const updateLyrics = (force = false) => {
   const activeLine = activeIndex >= 0 ? lyricLines[activeIndex] : lyricLines[0];
 
   if (activeLine) {
-    const viewportHeight = elements.lyricsViewport.clientHeight || elements.lyricsTrack.clientHeight;
+    const viewportHeight = el.lyricsViewport.clientHeight || el.lyricsTrack.clientHeight;
     const targetOffset = viewportHeight / 2 - activeLine.offsetTop - activeLine.offsetHeight / 2;
 
-    elements.app.style.setProperty("--lyrics-offset", `${targetOffset}px`);
+    el.app.style.setProperty("--lyrics-offset", `${targetOffset}px`);
   }
 
   updateLyricCalibrationUi();
@@ -791,7 +684,7 @@ const startPlaybackSyncLoop = () => {
   const tick = () => {
     updateProgress();
 
-    if (elements.audio.paused || elements.audio.ended) {
+    if (el.audio.paused || el.audio.ended) {
       state.playbackSyncFrame = 0;
       return;
     }
@@ -821,98 +714,16 @@ const clearPendingExportStartObservers = () => {
   clearPendingPlaybackStart();
 };
 
-interface ObserveStartOptions {
-  target: EventTarget;
-  startEvents: readonly string[];
-  errorEvents: readonly string[];
-  hasStarted: () => boolean;
-  getError: () => Error;
-  cancelledErrorMessage: string;
-}
-
-const observeStart = ({
-  target,
-  startEvents,
-  errorEvents,
-  hasStarted,
-  getError,
-  cancelledErrorMessage
-}: ObserveStartOptions) => {
-  const ac = new AbortController();
-  const { signal } = ac;
-  const { promise, resolve, reject } = Promise.withResolvers<number>();
-  void promise.catch(() => {});
-  const fallbackSignal = AbortSignal.timeout(EXPORT_START_TIMEOUT_MS);
-
-  let settled = false;
-
-  const finalize = (callback: () => void) => {
-    if (settled) {
-      return;
-    }
-
-    settled = true;
-    ac.abort();
-    callback();
-  };
-
-  const handleStart = () => finalize(() => resolve(performance.now()));
-  const handleError = () => finalize(() => reject(getError()));
-
-  for (const eventName of startEvents) {
-    target.addEventListener(eventName, handleStart, { signal });
-  }
-
-  for (const eventName of errorEvents) {
-    target.addEventListener(eventName, handleError, { signal });
-  }
-
-  fallbackSignal.addEventListener("abort", () => {
-    if (hasStarted()) {
-      handleStart();
-    }
-  }, { once: true, signal });
-
-  signal.addEventListener("abort", () => {
-    if (!settled) {
-      settled = true;
-      reject(new Error(cancelledErrorMessage));
-    }
-  });
-
-  return { promise, ac };
-};
-
-const observeMediaRecorderStart = (mediaRecorder: MediaRecorder) => observeStart({
-  target: mediaRecorder,
-  startEvents: ["start"],
-  errorEvents: ["error"],
-  hasStarted: () => mediaRecorder.state === "recording",
-  getError: () => new Error("MEDIA_RECORDER_START_FAILED"),
-  cancelledErrorMessage: "MEDIA_RECORDER_START_CANCELLED"
-});
-
-const observeAudioPlaybackStart = (audioElement: HTMLAudioElement) => {
-  return observeStart({
-    target: audioElement,
-    startEvents: ["playing", "timeupdate"],
-    errorEvents: ["error"],
-    hasStarted: () => !audioElement.paused,
-    getError: () => new Error(audioElement.error?.message || "AUDIO_PLAYBACK_START_FAILED"),
-    cancelledErrorMessage: "AUDIO_PLAYBACK_START_CANCELLED"
-  });
-};
-
 const seekByProgressValue = (rawValue: string) => {
-  if (isPlaybackInteractionLocked()) {
+  if (state.isExporting) {
     return;
   }
 
-  const max = Number(elements.progress.max) || 1000;
+  const max = Number(el.progress.max) || 1000;
   const ratio = Math.min(1, Math.max(0, Number(rawValue) / max));
 
-  if (Number.isFinite(elements.audio.duration) && elements.audio.duration > 0) {
-    elements.audio.currentTime = ratio * elements.audio.duration;
+  if (Number.isFinite(el.audio.duration) && el.audio.duration > 0) {
+    el.audio.currentTime = ratio * el.audio.duration;
     updateProgress();
   }
 };
@@ -920,102 +731,68 @@ const seekByProgressValue = (rawValue: string) => {
 const setRecordingMode = (enabled: boolean) => {
   state.recordingMode = enabled;
   document.body.classList.toggle("recording-mode", enabled);
-  elements.toggleRecordingBtn.textContent = enabled ? TEXT.exitRecordingMode : TEXT.recordingMode;
+  el.toggleRecordingBtn.textContent = enabled ? TEXT.exitRecordingMode : TEXT.recordingMode;
 };
 
 const setPanelHidden = (hidden: boolean) => {
   state.panelHidden = hidden;
 
   if (hidden) {
-    elements.panel.close();
+    el.panel.close();
   } else {
-    elements.panel.show();
+    el.panel.show();
   }
 };
 
-const supportsInlineExport = () => (
-  Boolean(navigator.mediaDevices?.getDisplayMedia) &&
-  typeof MediaRecorder === "function" &&
-  typeof Promise.withResolvers === "function" &&
-  typeof AbortSignal.timeout === "function" &&
-  Boolean(MediaRecorder.isTypeSupported?.(EXPORT_RECORDING_MIME_TYPE))
-);
-
-const isPlaybackInteractionLocked = () => state.isExporting;
-
 const updateExportUi = () => {
-  const playbackInteractionLocked = isPlaybackInteractionLocked();
-  elements.playBtn.disabled = playbackInteractionLocked;
-  elements.progress.disabled = playbackInteractionLocked;
+  el.playBtn.disabled = state.isExporting;
+  el.progress.disabled = state.isExporting;
 
   if (state.isExporting) {
-    elements.exportVideoBtn.disabled = false;
-    elements.exportVideoBtn.textContent = TEXT.exportStopButton;
+    el.exportVideoBtn.disabled = false;
+    el.exportVideoBtn.textContent = TEXT.exportStopButton;
     updateLyricCalibrationUi();
     return;
   }
 
   if (state.ffmpegLoadPromise) {
-    elements.exportVideoBtn.disabled = true;
-    elements.exportVideoBtn.textContent = TEXT.exportPreparingButton;
+    el.exportVideoBtn.disabled = true;
+    el.exportVideoBtn.textContent = TEXT.exportPreparingButton;
     updateLyricCalibrationUi();
     return;
   }
 
   if (state.isMuxing) {
-    elements.exportVideoBtn.disabled = true;
-    elements.exportVideoBtn.textContent = TEXT.exportMuxingButton;
+    el.exportVideoBtn.disabled = true;
+    el.exportVideoBtn.textContent = TEXT.exportMuxingButton;
     updateLyricCalibrationUi();
     return;
   }
 
-  elements.exportVideoBtn.disabled = false;
-  elements.exportVideoBtn.textContent = TEXT.exportButton;
+  el.exportVideoBtn.disabled = false;
+  el.exportVideoBtn.textContent = TEXT.exportButton;
   updateLyricCalibrationUi();
 };
 
 const ensureFfmpeg = async () => {
-  if (state.ffmpeg) {
-    return state.ffmpeg;
-  }
-
-  if (!supportsInlineExport()) {
-    throw new Error("EXPORT_UNSUPPORTED");
-  }
+  if (state.ffmpeg) return state.ffmpeg;
+  if (!supportsInlineExport()) throw new Error("EXPORT_UNSUPPORTED");
 
   if (!state.ffmpegLoadPromise) {
     updateExportUi();
     setExportStatus(TEXT.exportPreparingHint);
 
     state.ffmpegLoadPromise = (async () => {
-      let ffmpeg: FFmpeg | null = null;
-
       try {
-        const [coreURL, wasmURL] = await Promise.all([
-          toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.js`, "text/javascript"),
-          toBlobURL(`${FFMPEG_CORE_BASE}/ffmpeg-core.wasm`, "application/wasm")
-        ]);
-
-        state.ffmpegAssetUrls = [coreURL, wasmURL];
-
-        ffmpeg = new FFmpeg();
-        ffmpeg.on("progress", ({ progress }) => {
-          if (!state.isMuxing) {
-            return;
+        const { ffmpeg, assetUrls } = await loadFfmpegCore((percent) => {
+          if (state.isMuxing) {
+            setExportStatus(`正在把录制画面与原始音频封装到 MKV… ${percent}%`);
           }
-
-          const percent = Math.max(1, Math.min(99, Math.round((progress || 0) * 100)));
-          setExportStatus(`正在把录制画面与原始音频封装到 MKV… ${percent}%`);
         });
-
-        await ffmpeg.load({ coreURL, wasmURL });
+        state.ffmpegAssetUrls = assetUrls;
         state.ffmpeg = ffmpeg;
         return ffmpeg;
       } catch (error) {
-        if (ffmpeg) {
-          ffmpeg.terminate();
-        }
-
         state.ffmpeg = null;
         revokeFfmpegAssetUrls();
         throw error;
@@ -1030,10 +807,9 @@ const ensureFfmpeg = async () => {
 };
 
 const releaseDisplayStream = () => {
-  if (state.displayStream) {
-    state.displayStream.getTracks().forEach((track) => track.stop());
-    state.displayStream = null;
-  }
+  if (!state.displayStream) return;
+  for (const track of state.displayStream.getTracks()) track.stop();
+  state.displayStream = null;
 };
 
 const resetExportSession = () => {
@@ -1050,7 +826,7 @@ const teardownExportUi = () => {
   document.body.classList.remove("is-exporting");
   setRecordingMode(false);
   clearPendingExportStartObservers();
-  elements.audio.pause();
+  el.audio.pause();
 
   if (state.exportEndedAc) {
     state.exportEndedAc.abort();
@@ -1066,93 +842,15 @@ const getSafeExportBaseName = () => {
   return safeName || "lyrics-export";
 };
 
-const downloadBlob = (blob: Blob, filename: string) => {
-  const url = URL.createObjectURL(blob);
-
-  if (state.lastExportUrl) {
-    URL.revokeObjectURL(state.lastExportUrl);
-  }
-
-  state.lastExportUrl = url;
-
-  const anchor = document.createElement("a");
-  anchor.style.display = "none";
-  anchor.href = url;
-  anchor.download = filename;
-  document.body.appendChild(anchor);
-  anchor.click();
-  window.setTimeout(() => anchor.remove(), 100);
-};
-
-const cleanupFfmpegFiles = async (ffmpeg: FFmpeg, fileNames: string[]) => {
-  await Promise.all(fileNames.map(async (fileName) => {
-    try {
-      await ffmpeg.deleteFile(fileName);
-    } catch (error) {
-      console.warn("清理 ffmpeg 临时文件失败：", fileName, error);
-    }
-  }));
-};
-
-const muxRecordedVideo = async (
-  recordedBlob: Blob,
-  audioFile: File,
-  audioLeadInMs = 0,
-) => {
-  if (!state.ffmpeg) {
-    throw new Error("EXPORT_ENGINE_NOT_READY");
-  }
-
-  state.exportJobCount += 1;
-
-  const jobId = state.exportJobCount;
-  const ffmpeg = state.ffmpeg;
-  const audioExtension = getFileExtension(audioFile.name) || ".bin";
-  const captureInputName = `capture-${jobId}.webm`;
-  const audioInputName = `audio-${jobId}${audioExtension}`;
-  const outputName = `export-${jobId}.mkv`;
-  const audioOffsetSeconds = Math.max(0, audioLeadInMs) / 1000;
-  const audioOffsetArgs = audioOffsetSeconds > 0.001
-    ? ["-itsoffset", audioOffsetSeconds.toFixed(3)]
-    : [];
-
-  try {
-    await ffmpeg.writeFile(captureInputName, new Uint8Array(await recordedBlob.arrayBuffer()));
-    await ffmpeg.writeFile(audioInputName, new Uint8Array(await audioFile.arrayBuffer()));
-    await ffmpeg.exec([
-      "-i", captureInputName,
-      ...audioOffsetArgs,
-      "-i", audioInputName,
-      "-map", "0:v:0",
-      "-map", "1:a:0",
-      "-c:v", "copy",
-      "-c:a", "copy",
-      "-shortest",
-      outputName
-    ]);
-
-    const outputData = await ffmpeg.readFile(outputName);
-
-    if (!(outputData instanceof Uint8Array)) {
-      throw new TypeError("FFmpeg output must be binary data");
-    }
-
-    const outputBuffer = outputData.buffer instanceof ArrayBuffer &&
-      outputData.byteOffset === 0 &&
-      outputData.byteLength === outputData.buffer.byteLength
-      ? outputData.buffer
-      : outputData.slice().buffer;
-
-    return new Blob([outputBuffer], { type: "video/x-matroska" });
-  } finally {
-    await cleanupFfmpegFiles(ffmpeg, [captureInputName, audioInputName, outputName]);
-  }
+const doDownload = (blob: Blob, filename: string) => {
+  if (state.lastExportUrl) URL.revokeObjectURL(state.lastExportUrl);
+  state.lastExportUrl = downloadBlob(blob, filename);
 };
 
 const loadDemo = () => {
   state.title = demo.title;
   state.artist = demo.artist;
-  elements.lrcInput.value = demo.lrc;
+  el.lrcInput.value = demo.lrc;
   syncTextInputs();
   applyLyricsText(demo.lrc);
 
@@ -1197,65 +895,63 @@ const handleDrop = async (event: DragEvent) => {
 };
 
 const handleTitleInput = () => {
-  state.title = elements.titleInput.value;
+  state.title = el.titleInput.value;
   syncTextInputs();
 };
 
 const handleArtistInput = () => {
-  state.artist = elements.artistInput.value;
+  state.artist = el.artistInput.value;
   syncTextInputs();
 };
 
 const handleLyricsInput = debounce(() => {
-  applyLyricsText(elements.lrcInput.value);
+  applyLyricsText(el.lrcInput.value);
 }, 300);
 
 const handleCoverUpload = () => {
-  const file = elements.coverInput.files?.[0];
-  elements.coverInput.value = "";
+  const file = el.coverInput.files?.[0];
+  el.coverInput.value = "";
   importCoverFile(file);
 };
 
 const handleAudioUpload = () => {
-  const file = elements.audioInput.files?.[0];
-  elements.audioInput.value = "";
+  const file = el.audioInput.files?.[0];
+  el.audioInput.value = "";
   importAudioFile(file);
 };
 
 const handleFontScale = () => {
-  const scale = Number(elements.fontScaleInput.value) / 100;
+  const scale = Number(el.fontScaleInput.value) / 100;
   document.documentElement.style.setProperty("--lyrics-scale", String(scale));
   updateLyrics(true);
 };
 
 const handleCoverScale = () => {
-  const minSlider = 26;
-  const maxSlider = 42;
-  const minCoverSize = 280;
-  const maxCoverSize = 440;
-  const sliderValue = Number(elements.coverScaleInput.value);
+  const minSlider = Number(el.coverScaleInput.min) || 26;
+  const maxSlider = Number(el.coverScaleInput.max) || 42;
+  const sliderValue = Number(el.coverScaleInput.value);
   const ratio = (sliderValue - minSlider) / (maxSlider - minSlider);
-  const coverSize = Math.round(minCoverSize + (maxCoverSize - minCoverSize) * ratio);
+  const coverSize = Math.round(280 + 160 * ratio);
 
   document.documentElement.style.setProperty("--cover-size", `${coverSize}px`);
 };
 
 const handleBgDarkness = () => {
-  const value = Number(elements.bgDarknessInput.value) / 100;
+  const value = Number(el.bgDarknessInput.value) / 100;
   document.documentElement.style.setProperty("--bg-darkness", String(value));
 };
 
 const handleBgBlur = () => {
-  const value = Number(elements.bgBlurInput.value);
+  const value = Number(el.bgBlurInput.value);
   document.documentElement.style.setProperty("--bg-blur", `${value}px`);
 };
 
 const handleBgAnimate = () => {
-  elements.bg.classList.toggle("animate", elements.bgAnimateInput.checked);
+  el.bg.classList.toggle("animate", el.bgAnimateInput.checked);
 };
 
 const handleLyricsOffsetInput = () => {
-  setLyricsGlobalOffset(elements.lrcOffsetInput.value);
+  setLyricsGlobalOffset(el.lrcOffsetInput.value);
 };
 
 const handleLyricsNudge = (deltaMs: number) => {
@@ -1289,12 +985,13 @@ const finalizeRecordedVideo = async () => {
       throw new Error("EXPORT_AUDIO_FILE_MISSING");
     }
 
-    const muxedBlob = await muxRecordedVideo(recordedBlob, audioFile, audioLeadInMs);
-    downloadBlob(muxedBlob, `${exportBaseName}.mkv`);
+    if (!state.ffmpeg) throw new Error("EXPORT_ENGINE_NOT_READY");
+    const muxedBlob = await muxRecordedVideo(state.ffmpeg, ++state.exportJobCount, recordedBlob, audioFile, audioLeadInMs);
+    doDownload(muxedBlob, `${exportBaseName}.mkv`);
     setExportStatus(TEXT.exportDoneHint);
   } catch (error) {
     console.error("Muxing failed, falling back to raw capture:", error);
-    downloadBlob(recordedBlob, `${exportBaseName}-capture.webm`);
+    doDownload(recordedBlob, `${exportBaseName}-capture.webm`);
     alert(error instanceof Error && error.message === "EXPORT_AUDIO_FILE_MISSING"
       ? TEXT.exportRequiresOriginalAudio
       : TEXT.exportMuxFailed);
@@ -1310,13 +1007,11 @@ const stopExporting = (shouldSave = true) => {
     return;
   }
 
-  const saveExport = shouldSave !== false;
-
   teardownExportUi();
-  state.shouldSaveExport = saveExport;
-  state.isMuxing = saveExport;
+  state.shouldSaveExport = shouldSave;
+  state.isMuxing = shouldSave;
   updateExportUi();
-  setExportStatus(saveExport ? TEXT.exportMuxingHint : TEXT.exportCancelledHint);
+  setExportStatus(shouldSave ? TEXT.exportMuxingHint : TEXT.exportCancelledHint);
 
   if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
     state.mediaRecorder.stop();
@@ -1347,7 +1042,7 @@ const startExporting = async () => {
     return;
   }
 
-  if (!elements.audio.src) {
+  if (!el.audio.src) {
     alert(TEXT.exportRequiresAudio);
     setExportStatus(TEXT.exportRequiresAudio);
     return;
@@ -1382,8 +1077,8 @@ const startExporting = async () => {
       throw new Error("EXPORT_VIDEO_TRACK_MISSING");
     }
 
-    elements.audio.pause();
-    elements.audio.currentTime = 0;
+    el.audio.pause();
+    el.audio.currentTime = 0;
 
     state.displayStream = videoStream;
     state.recordedChunks = [];
@@ -1422,9 +1117,9 @@ const startExporting = async () => {
       const recordingStartedAt = await recordingStartObserver.promise;
       state.pendingRecordingStartAc = null;
 
-      const playbackStartObserver = observeAudioPlaybackStart(elements.audio);
+      const playbackStartObserver = observeAudioPlaybackStart(el.audio);
       state.pendingPlaybackStartAc = playbackStartObserver.ac;
-      await elements.audio.play();
+      await el.audio.play();
       const playbackStartedAt = await playbackStartObserver.promise;
       state.pendingPlaybackStartAc = null;
       state.exportAudioLeadInMs = Math.max(0, playbackStartedAt - recordingStartedAt);
@@ -1454,7 +1149,7 @@ const startExporting = async () => {
     }
 
     state.exportEndedAc = new AbortController();
-    elements.audio.addEventListener("ended", () => stopExporting(), {
+    el.audio.addEventListener("ended", () => stopExporting(), {
       once: true,
       signal: state.exportEndedAc.signal
     });
@@ -1502,13 +1197,13 @@ const startExporting = async () => {
 };
 
 const togglePlayback = async () => {
-  if (!elements.audio.src || isPlaybackInteractionLocked()) {
+  if (!el.audio.src || state.isExporting) {
     return;
   }
 
-  if (elements.audio.paused) {
+  if (el.audio.paused) {
     try {
-      await elements.audio.play();
+      await el.audio.play();
     } catch (error) {
       console.warn(error);
     }
@@ -1516,52 +1211,52 @@ const togglePlayback = async () => {
     return;
   }
 
-  elements.audio.pause();
+  el.audio.pause();
 };
 
 const bindEvents = () => {
-  elements.titleInput.addEventListener("input", handleTitleInput);
-  elements.artistInput.addEventListener("input", handleArtistInput);
-  elements.lrcInput.addEventListener("input", handleLyricsInput);
-  elements.coverInput.addEventListener("change", handleCoverUpload);
-  elements.audioInput.addEventListener("change", handleAudioUpload);
-  elements.fontScaleInput.addEventListener("input", handleFontScale);
-  elements.coverScaleInput.addEventListener("input", handleCoverScale);
-  elements.bgDarknessInput.addEventListener("input", handleBgDarkness);
-  elements.bgBlurInput.addEventListener("input", handleBgBlur);
-  elements.bgAnimateInput.addEventListener("change", handleBgAnimate);
-  elements.lrcOffsetInput.addEventListener("input", handleLyricsOffsetInput);
-  elements.nudgeLrcBackBtn.addEventListener("click", () => handleLyricsNudge(-100));
-  elements.nudgeLrcForwardBtn.addEventListener("click", () => handleLyricsNudge(100));
-  elements.alignCurrentLyricBtn.addEventListener("click", alignLyricsFromCurrentLine);
-  elements.resetLrcCalibrationBtn.addEventListener("click", resetLyricsCalibration);
+  el.titleInput.addEventListener("input", handleTitleInput);
+  el.artistInput.addEventListener("input", handleArtistInput);
+  el.lrcInput.addEventListener("input", handleLyricsInput);
+  el.coverInput.addEventListener("change", handleCoverUpload);
+  el.audioInput.addEventListener("change", handleAudioUpload);
+  el.fontScaleInput.addEventListener("input", handleFontScale);
+  el.coverScaleInput.addEventListener("input", handleCoverScale);
+  el.bgDarknessInput.addEventListener("input", handleBgDarkness);
+  el.bgBlurInput.addEventListener("input", handleBgBlur);
+  el.bgAnimateInput.addEventListener("change", handleBgAnimate);
+  el.lrcOffsetInput.addEventListener("input", handleLyricsOffsetInput);
+  el.nudgeLrcBackBtn.addEventListener("click", () => handleLyricsNudge(-100));
+  el.nudgeLrcForwardBtn.addEventListener("click", () => handleLyricsNudge(100));
+  el.alignCurrentLyricBtn.addEventListener("click", alignLyricsFromCurrentLine);
+  el.resetLrcCalibrationBtn.addEventListener("click", resetLyricsCalibration);
 
-  elements.playBtn.addEventListener("click", () => {
+  el.playBtn.addEventListener("click", () => {
     void togglePlayback();
   });
-  elements.exportVideoBtn.addEventListener("click", handleExportButtonClick);
-  elements.togglePanelBtn.addEventListener("click", () => setPanelHidden(!state.panelHidden));
-  elements.toggleRecordingBtn.addEventListener("click", () => setRecordingMode(!state.recordingMode));
-  elements.loadDemoBtn.addEventListener("click", loadDemo);
-  elements.resetViewBtn.addEventListener("click", () => {
-    elements.audio.currentTime = 0;
+  el.exportVideoBtn.addEventListener("click", handleExportButtonClick);
+  el.togglePanelBtn.addEventListener("click", () => setPanelHidden(!state.panelHidden));
+  el.toggleRecordingBtn.addEventListener("click", () => setRecordingMode(!state.recordingMode));
+  el.loadDemoBtn.addEventListener("click", loadDemo);
+  el.resetViewBtn.addEventListener("click", () => {
+    el.audio.currentTime = 0;
     updateProgress();
     updateLyrics(true);
   });
 
-  elements.audio.addEventListener("play", startPlaybackSyncLoop);
-  elements.audio.addEventListener("pause", () => {
+  el.audio.addEventListener("play", startPlaybackSyncLoop);
+  el.audio.addEventListener("pause", () => {
     stopPlaybackSyncLoop();
     updateProgress();
   });
-  elements.audio.addEventListener("loadedmetadata", updateProgress);
-  elements.audio.addEventListener("ended", () => {
+  el.audio.addEventListener("loadedmetadata", updateProgress);
+  el.audio.addEventListener("ended", () => {
     stopPlaybackSyncLoop();
     updateProgress();
   });
 
-  elements.progress.addEventListener("input", () => {
-    seekByProgressValue(elements.progress.value);
+  el.progress.addEventListener("input", () => {
+    seekByProgressValue(el.progress.value);
   });
 
   window.addEventListener("keydown", (event) => {
@@ -1576,12 +1271,12 @@ const bindEvents = () => {
         return;
       }
 
-      if (isPlaybackInteractionLocked()) {
+      if (state.isExporting) {
         return;
       }
 
       event.preventDefault();
-      elements.playBtn.click();
+      el.playBtn.click();
       return;
     }
 
@@ -1631,24 +1326,24 @@ const bindEvents = () => {
     }
 
     if (event.key === "ArrowRight") {
-      if (isPlaybackInteractionLocked()) {
+      if (state.isExporting) {
         return;
       }
 
-      elements.audio.currentTime = Math.min(
-        elements.audio.duration || 0,
-        (elements.audio.currentTime || 0) + 5
+      el.audio.currentTime = Math.min(
+        el.audio.duration || 0,
+        (el.audio.currentTime || 0) + 5
       );
       updateProgress();
       return;
     }
 
     if (event.key === "ArrowLeft") {
-      if (isPlaybackInteractionLocked()) {
+      if (state.isExporting) {
         return;
       }
 
-      elements.audio.currentTime = Math.max(0, (elements.audio.currentTime || 0) - 5);
+      el.audio.currentTime = Math.max(0, (el.audio.currentTime || 0) - 5);
       updateProgress();
     }
   });

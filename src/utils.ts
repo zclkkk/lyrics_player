@@ -2,14 +2,14 @@ export const debounce = <TArgs extends unknown[]>(
   fn: (...args: TArgs) => void,
   ms: number,
 ) => {
-  let timer: ReturnType<typeof window.setTimeout> | undefined;
+  let timer: number | undefined;
 
   return (...args: TArgs) => {
     if (timer !== undefined) {
-      window.clearTimeout(timer);
+      clearTimeout(timer);
     }
 
-    timer = window.setTimeout(() => fn(...args), ms);
+    timer = setTimeout(() => fn(...args), ms);
   };
 };
 

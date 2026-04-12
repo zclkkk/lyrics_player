@@ -98,16 +98,9 @@ const boostSaturation = ([r, g, b]: RgbColor, factor: number): RgbColor => {
 const getLuminance = ([r, g, b]: RgbColor) => 0.299 * r + 0.587 * g + 0.114 * b;
 
 export const getDominantColors = (image: CanvasImageSource) => {
-  const canvas = document.createElement("canvas");
-  const context = canvas.getContext("2d", { willReadFrequently: true });
   const size = 64;
-
-  if (!context) {
-    return { colors: FALLBACK_COLORS };
-  }
-
-  canvas.width = size;
-  canvas.height = size;
+  const canvas = new OffscreenCanvas(size, size);
+  const context = canvas.getContext("2d", { willReadFrequently: true })!;
   context.drawImage(image, 0, 0, size, size);
 
   const pixels = collectPixels(context.getImageData(0, 0, size, size));

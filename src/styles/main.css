@@ -46,10 +46,10 @@
   --accent-2-rgb: 255, 196, 124;
   --accent-3-rgb: 160, 80, 120;
   --accent-4-rgb: 140, 190, 255;
-  --text-main: rgba(255, 255, 255, 0.95);
-  --text-soft: rgba(255, 255, 255, 0.72);
-  --text-faint: rgba(255, 255, 255, 0.36);
-  --shadow: 0 30px 90px rgba(0, 0, 0, 0.38);
+  --text-main: rgb(255 255 255 / 0.95);
+  --text-soft: rgb(255 255 255 / 0.72);
+  --text-faint: rgb(255 255 255 / 0.36);
+  --shadow: 0 30px 90px rgb(0 0 0 / 0.38);
   --radius-xs: 8px;
   --radius-sm: 12px;
   --radius-md: 20px;
@@ -77,6 +77,21 @@ body {
 body {
   &.recording-mode {
     cursor: none;
+
+    & .progress::-webkit-slider-thumb {
+      width: 0;
+      height: 0;
+      margin-top: 0;
+      box-shadow: none;
+      opacity: 0;
+    }
+
+    & .progress::-moz-range-thumb {
+      width: 0;
+      height: 0;
+      box-shadow: none;
+      opacity: 0;
+    }
   }
 
   &.is-exporting .floating-tools {
@@ -521,21 +536,6 @@ select {
   }
 }
 
-body.recording-mode .progress::-webkit-slider-thumb {
-  width: 0;
-  height: 0;
-  margin-top: 0;
-  box-shadow: none;
-  opacity: 0;
-}
-
-body.recording-mode .progress::-moz-range-thumb {
-  width: 0;
-  height: 0;
-  box-shadow: none;
-  opacity: 0;
-}
-
 .controls-panel {
   position: absolute;
   top: 24px;
@@ -624,7 +624,6 @@ body.recording-mode .progress::-moz-range-thumb {
 .mini-btn {
   padding: 8px 10px;
   font-size: 12px;
-  border-radius: var(--radius-sm);
 }
 
 .btn.primary {
@@ -755,7 +754,7 @@ body.recording-mode .progress::-moz-range-thumb {
     border-radius: var(--radius-xs);
     background: rgba(255, 255, 255, 0.04);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     position: relative;
 
     &:checked {
