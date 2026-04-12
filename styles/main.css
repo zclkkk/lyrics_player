@@ -242,24 +242,26 @@ select {
 }
 
 .left {
+  --cover-footprint: min(var(--cover-size), 100%);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
   min-width: 0;
   padding-left: clamp(60px, 8vw, 160px);
+  transform: translateX(clamp(38px, 4.6vw, 88px));
 }
 
 .cover-wrap {
   position: relative;
-  width: min(var(--cover-size), 100%);
+  width: var(--cover-footprint);
   max-width: 100%;
   aspect-ratio: 1 / 1;
   margin-bottom: 30px;
   overflow: hidden;
   border-radius: var(--cover-radius);
   box-shadow: var(--shadow);
-  transform: translateZ(0);
+  transform: translate3d(0, clamp(28px, 3.4vh, 48px), 0);
 
   &::before {
     content: "";
@@ -292,7 +294,9 @@ select {
 }
 
 .meta {
-  width: min(100%, 520px);
+  width: min(100%, var(--cover-footprint));
+  max-width: var(--cover-footprint);
+  transform: translateY(clamp(24px, 2.8vh, 40px));
 }
 
 .eyebrow {
@@ -306,18 +310,20 @@ select {
 
 .title {
   margin: 0;
-  font-size: clamp(36px, 3.1vw, 56px);
-  line-height: 1.08;
+  font-size: clamp(31px, 2.6vw, 46px);
+  line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
   text-wrap: balance;
 }
 
 .artist {
   margin-top: 14px;
   color: var(--text-soft);
-  font-size: clamp(16px, 1.3vw, 22px);
-  font-weight: 600;
+  font-size: clamp(14px, 1.05vw, 18px);
+  font-weight: 550;
+  overflow-wrap: anywhere;
 }
 
 .right {
@@ -821,16 +827,23 @@ body.recording-mode .progress::-moz-range-thumb {
   }
 
   .left {
+    --cover-footprint: min(var(--cover-size), 34vw, 240px);
     flex-direction: row;
     align-items: center;
     gap: 24px;
     padding-left: 0;
+    transform: none;
   }
 
   .cover-wrap {
-    width: min(var(--cover-size), 34vw, 240px);
+    width: var(--cover-footprint);
     margin-bottom: 0;
     flex: 0 0 auto;
+    transform: translateZ(0);
+  }
+
+  .meta {
+    transform: none;
   }
 
   .right {
@@ -853,12 +866,13 @@ body.recording-mode .progress::-moz-range-thumb {
   }
 
   .left {
+    --cover-footprint: min(var(--cover-size), 72vw, 260px);
     flex-direction: column;
     align-items: flex-start;
   }
 
   .cover-wrap {
-    width: min(var(--cover-size), 72vw, 260px);
+    width: var(--cover-footprint);
   }
 
   .bottom {
