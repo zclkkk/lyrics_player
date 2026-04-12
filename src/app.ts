@@ -1159,11 +1159,15 @@ const handleLyricsInput = debounce(() => {
 }, 300);
 
 const handleCoverUpload = () => {
-  importCoverFile(elements.coverInput.files?.[0]);
+  const file = elements.coverInput.files?.[0];
+  elements.coverInput.value = "";
+  importCoverFile(file);
 };
 
 const handleAudioUpload = () => {
-  importAudioFile(elements.audioInput.files?.[0]);
+  const file = elements.audioInput.files?.[0];
+  elements.audioInput.value = "";
+  importAudioFile(file);
 };
 
 const handleFontScale = () => {
