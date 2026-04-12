@@ -246,11 +246,30 @@ const applyLyricsData = (lyrics) => {
   state.currentIndex = -1;
 };
 
+const syncLyricsUi = ({ rerender = false } = {}) => {
+  if (rerender) {
+    elements.lyricsTrack.replaceChildren();
+
+    state.lyrics.forEach((line, index) => {
+      const lineElement = document.createElement("div");
+      const hasText = Boolean((line.text || "").trim());
+
+      lineElement.className = `lyric-line${hasText ? "" : " empty"}`;
+      lineElement.textContent = line.text || " ";
+      lineElement.dataset.index = String(index);
+
+      elements.lyricsTrack.appendChild(lineElement);
+    });
+
+    state.lyricLineElements = Array.from(elements.lyricsTrack.children);
+  }
+
+  updateProgress();
+};
+
 const applyLyricsText = (text) => {
   applyLyricsData(parseLrc(text));
-  renderLyrics();
-  updateProgress();
-  updateLyricCalibrationUi();
+  syncLyricsUi({ rerender: true });
 };
 
 const getLyricsOffsetSeconds = () => state.lyricsGlobalOffsetMs / 1000;
@@ -329,7 +348,6 @@ const setLyricsGlobalOffset = (nextOffsetMs) => {
   const clamped = Math.max(-5000, Math.min(5000, Math.round(Number(nextOffsetMs) || 0)));
   state.lyricsGlobalOffsetMs = clamped;
   updateProgress();
-  updateLyricCalibrationUi();
 };
 
 const shiftLyricsFromIndex = (startIndex, deltaSeconds) => {
@@ -369,7 +387,6 @@ const shiftLyricsFromIndex = (startIndex, deltaSeconds) => {
   });
 
   updateProgress();
-  updateLyricCalibrationUi();
 };
 
 const alignLyricsFromCurrentLine = () => {
@@ -390,29 +407,7 @@ const resetLyricsCalibration = () => {
   state.lyrics = structuredClone(state.originalLyrics);
   state.lyricsGlobalOffsetMs = 0;
   state.currentIndex = -1;
-  renderLyrics();
-  updateProgress();
-  updateLyricCalibrationUi();
-};
-
-const renderLyrics = () => {
-  elements.lyricsTrack.replaceChildren();
-
-  state.lyrics.forEach((line, index) => {
-    const lineElement = document.createElement("div");
-    const hasText = Boolean((line.text || "").trim());
-
-    lineElement.className = `lyric-line${hasText ? "" : " empty"}`;
-    lineElement.textContent = line.text || " ";
-    lineElement.dataset.index = String(index);
-
-    elements.lyricsTrack.appendChild(lineElement);
-  });
-
-  state.lyricLineElements = Array.from(elements.lyricsTrack.children);
-  updateLyrics(true);
-  updateLyricCalibrationUi();
-
+  syncLyricsUi({ rerender: true });
 };
 
 const syncTextInputs = () => {
@@ -526,6 +521,7 @@ const updateLyrics = (force = false) => {
   const lyricLines = state.lyricLineElements;
 
   if (!lyricLines.length) {
+    updateLyricCalibrationUi();
     return;
   }
 
@@ -1441,8 +1437,6 @@ const init = () => {
   handleBgBlur({ target: elements.bgBlurInput });
   loadDemo();
   updateExportUi();
-  updateProgress();
-  updateLyricCalibrationUi();
 };
 
 init();
