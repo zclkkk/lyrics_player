@@ -312,15 +312,7 @@ const getCalibrationAnchorIndex = () => {
     }
   }
 
-  for (let index = state.lyrics.length - 1; index >= 0; --index) {
-    const line = state.lyrics[index];
-
-    if (line && Number.isFinite(line.time)) {
-      return index;
-    }
-  }
-
-  return -1;
+  return state.lyrics.findLastIndex((line) => Number.isFinite(line.time));
 };
 
 const isLyricCalibrationLocked = () => isExportBusy();
