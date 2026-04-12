@@ -29,7 +29,11 @@ export const parseLrc = (text) => {
     if (!matched && row.trim()) {
       const trimmed = row.trim();
       if (!/^\[[a-z]+:/i.test(trimmed)) {
-        return [{ time: 0, text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】" }];
+        return [{
+          time: Number.POSITIVE_INFINITY,
+          text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】",
+          isError: true
+        }];
       }
       lines.push({ time: Number.POSITIVE_INFINITY, text: trimmed });
     }

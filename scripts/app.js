@@ -250,8 +250,16 @@ const syncLyricsUi = ({ rerender = false } = {}) => {
     state.lyrics.forEach((line, index) => {
       const lineElement = document.createElement("div");
       const hasText = Boolean((line.text || "").trim());
+      const lineClassNames = ["lyric-line"];
 
-      lineElement.className = `lyric-line${hasText ? "" : " empty"}`;
+      if (!hasText) {
+        lineClassNames.push("empty");
+      }
+      if (line.isError) {
+        lineClassNames.push("error");
+      }
+
+      lineElement.className = lineClassNames.join(" ");
       lineElement.textContent = line.text || " ";
       lineElement.dataset.index = String(index);
 
@@ -274,6 +282,9 @@ const getLyricsOffsetSeconds = () => state.lyricsGlobalOffsetMs / 1000;
 const getEffectiveLyricTime = (time) => (
   Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time
 );
+
+const getLyricsValidationMessage = () =>
+  state.lyrics.find((line) => line?.isError)?.text || "";
 
 const hasCalibratableLyrics = () => state.lyrics.some((line) => Number.isFinite(line.time));
 
@@ -314,6 +325,7 @@ const isLyricCalibrationLocked = () =>
   state.isExporting || state.isMuxing || Boolean(state.ffmpegLoadPromise);
 
 const updateLyricCalibrationUi = () => {
+  const lyricsValidationMessage = getLyricsValidationMessage();
   const hasTimedLyrics = hasCalibratableLyrics();
   const anchorIndex = getCalibrationAnchorIndex();
   const anchorLine = anchorIndex >= 0 ? state.lyrics[anchorIndex] : null;
@@ -327,6 +339,11 @@ const updateLyricCalibrationUi = () => {
 
   elements.lrcOffsetInput.value = String(state.lyricsGlobalOffsetMs);
   elements.lrcOffsetValue.textContent = formatSignedMilliseconds(state.lyricsGlobalOffsetMs);
+
+  if (lyricsValidationMessage) {
+    elements.lrcCalibrationStatus.textContent = lyricsValidationMessage;
+    return;
+  }
 
   if (!hasTimedLyrics) {
     elements.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
