@@ -1080,11 +1080,18 @@ const muxRecordedVideo = async (
     ]);
 
     const outputData = await ffmpeg.readFile(outputName);
-    const outputBytes = outputData instanceof Uint8Array
-      ? Uint8Array.from(outputData)
-      : new TextEncoder().encode(outputData);
 
-    return new Blob([outputBytes], { type: "video/x-matroska" });
+    if (!(outputData instanceof Uint8Array)) {
+      throw new TypeError("FFmpeg output must be binary data");
+    }
+
+    const outputBuffer = outputData.buffer instanceof ArrayBuffer &&
+      outputData.byteOffset === 0 &&
+      outputData.byteLength === outputData.buffer.byteLength
+      ? outputData.buffer
+      : outputData.slice().buffer;
+
+    return new Blob([outputBuffer], { type: "video/x-matroska" });
   } finally {
     await cleanupFfmpegFiles(ffmpeg, [captureInputName, audioInputName, outputName]);
   }
