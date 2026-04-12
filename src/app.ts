@@ -15,6 +15,9 @@ import {
 
 const TEXT = {
   pageTitle: "AppleMusic 风格歌词录制页",
+  desktopOnlyKicker: "Desktop Only",
+  desktopOnlyTitle: "请使用桌面端打开",
+  desktopOnlyDescription: "这个工具现在只为桌面录制工作流设计。请把窗口放宽到至少 1100px，或直接在桌面浏览器中使用。",
   panelButton: "面板",
   recordingMode: "录制模式",
   exitRecordingMode: "退出录制模式",
@@ -65,6 +68,7 @@ const TEXT = {
   exportMuxFailed: "原音频封装失败，已回退为纯画面录制文件。",
   workflowHint:
     "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
+  nowPlayingEyebrow: "Now Playing",
   coverAlt: "歌曲封面",
   defaultTitle: "你的翻唱作品",
   defaultArtist: "你的名字 / 原唱信息",
@@ -204,9 +208,13 @@ const getRequiredQuery = <T extends Element>(selector: string) => {
 const elements = {
   app: getRequiredElement<HTMLDivElement>("app"),
   audio: getRequiredElement<HTMLAudioElement>("audio"),
+  desktopOnlyKicker: getRequiredElement<HTMLDivElement>("desktopOnlyKicker"),
+  desktopOnlyTitle: getRequiredElement<HTMLHeadingElement>("desktopOnlyTitle"),
+  desktopOnlyDescription: getRequiredElement<HTMLParagraphElement>("desktopOnlyDescription"),
   exportVideoBtn: getRequiredElement<HTMLButtonElement>("exportVideoBtn"),
   exportStatus: getRequiredElement<HTMLDivElement>("exportStatus"),
   cover: getRequiredElement<HTMLImageElement>("cover"),
+  eyebrow: getRequiredElement<HTMLDivElement>("eyebrow"),
   title: getRequiredElement<HTMLHeadingElement>("title"),
   artist: getRequiredElement<HTMLDivElement>("artist"),
   lyricsViewport: getRequiredElement<HTMLDivElement>("lyricsViewport"),
@@ -266,6 +274,9 @@ const setExportStatus = (text: string) => {
 
 const applyStaticText = () => {
   document.title = TEXT.pageTitle;
+  elements.desktopOnlyKicker.textContent = TEXT.desktopOnlyKicker;
+  elements.desktopOnlyTitle.textContent = TEXT.desktopOnlyTitle;
+  elements.desktopOnlyDescription.textContent = TEXT.desktopOnlyDescription;
   elements.togglePanelBtn.textContent = TEXT.panelButton;
   elements.toggleRecordingBtn.textContent = TEXT.recordingMode;
   elements.shortcutsBadge.textContent = TEXT.shortcuts;
@@ -295,7 +306,9 @@ const applyStaticText = () => {
   elements.playBtn.textContent = TEXT.playPause;
   elements.exportVideoBtn.textContent = TEXT.exportButton;
   elements.workflowHint.textContent = TEXT.workflowHint;
+  elements.eyebrow.textContent = TEXT.nowPlayingEyebrow;
   elements.cover.alt = TEXT.coverAlt;
+  elements.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
   setExportStatus(TEXT.exportIdleHint);
 };
 

@@ -5,15 +5,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark" />
-  <title>AppleMusic 风格歌词录制页</title>
+  <title></title>
 </head>
 
 <body>
   <div class="desktop-only-notice" role="status" aria-live="polite">
     <div class="desktop-only-card">
-      <div class="desktop-only-kicker">Desktop Only</div>
-      <h1>请使用桌面端打开</h1>
-      <p>这个工具现在只为桌面录制工作流设计。请把窗口放宽到至少 1100px，或直接在桌面浏览器中使用。</p>
+      <div class="desktop-only-kicker" id="desktopOnlyKicker"></div>
+      <h1 id="desktopOnlyTitle"></h1>
+      <p id="desktopOnlyDescription"></p>
     </div>
   </div>
 
@@ -23,91 +23,87 @@
     <div class="grain"></div>
 
     <div class="floating-tools">
-      <button class="mini-btn" id="togglePanelBtn" type="button">面板</button>
-      <button class="mini-btn" id="toggleRecordingBtn" type="button">录制模式</button>
-      <div class="badge" id="shortcutsBadge">空格 播放 / 暂停 · R 录制模式 · H 隐藏面板</div>
+      <button class="mini-btn" id="togglePanelBtn" type="button"></button>
+      <button class="mini-btn" id="toggleRecordingBtn" type="button"></button>
+      <div class="badge" id="shortcutsBadge"></div>
     </div>
 
     <dialog class="controls-panel" id="panel" open>
       <div class="panel-head">
-        <div class="panel-title" id="panelTitle">录制控制台</div>
+        <div class="panel-title" id="panelTitle"></div>
         <div class="panel-actions">
-          <button class="mini-btn" id="loadDemoBtn" type="button">加载示例</button>
-          <button class="mini-btn" id="resetViewBtn" type="button">回到开头</button>
+          <button class="mini-btn" id="loadDemoBtn" type="button"></button>
+          <button class="mini-btn" id="resetViewBtn" type="button"></button>
         </div>
       </div>
 
       <div class="grid">
         <div class="row2">
           <div class="field">
-            <label for="titleInput" id="songTitleLabel">歌名</label>
-            <input type="text" id="titleInput" value="你的翻唱作品" />
+            <label for="titleInput" id="songTitleLabel"></label>
+            <input type="text" id="titleInput" />
           </div>
           <div class="field">
-            <label for="artistInput" id="artistLabel">歌手 / 署名</label>
-            <input type="text" id="artistInput" value="你的名字 / 原唱信息" />
+            <label for="artistInput" id="artistLabel"></label>
+            <input type="text" id="artistInput" />
           </div>
         </div>
 
         <div class="row2">
           <div class="field">
-            <label for="coverInput" id="coverLabel">封面</label>
-            <label class="file-label" for="coverInput" id="coverPickerLabel">选择封面图片</label>
+            <label for="coverInput" id="coverLabel"></label>
+            <label class="file-label" for="coverInput" id="coverPickerLabel"></label>
             <input id="coverInput" type="file" accept="image/*" hidden />
           </div>
           <div class="field">
-            <label for="audioInput" id="audioLabel">音频</label>
-            <label class="file-label" for="audioInput" id="audioPickerLabel">选择音频文件</label>
+            <label for="audioInput" id="audioLabel"></label>
+            <label class="file-label" for="audioInput" id="audioPickerLabel"></label>
             <input id="audioInput" type="file" accept="audio/*" hidden />
           </div>
         </div>
 
         <div class="field">
-          <label for="lrcInput" id="lrcLabel">LRC 歌词</label>
-          <textarea id="lrcInput" placeholder="粘贴 .lrc 内容，例如：&#10;[00:00.00]你的翻唱标题&#10;[00:12.30]第一句歌词"></textarea>
+          <label for="lrcInput" id="lrcLabel"></label>
+          <textarea id="lrcInput"></textarea>
         </div>
 
         <div class="field calibration-card">
           <div class="field-header">
-            <label for="lrcOffsetInput" id="lrcCalibrationLabel">歌词校准</label>
+            <label for="lrcOffsetInput" id="lrcCalibrationLabel"></label>
             <div class="value-pill" id="lrcOffsetValue">0 ms</div>
           </div>
-          <div class="hint" id="lrcCalibrationHint">
-            整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。
-          </div>
+          <div class="hint" id="lrcCalibrationHint"></div>
           <div class="field calibration-slider">
-            <label for="lrcOffsetInput" id="lrcOffsetLabel">整体偏移</label>
+            <label for="lrcOffsetInput" id="lrcOffsetLabel"></label>
             <input type="range" id="lrcOffsetInput" min="-5000" max="5000" step="10" value="0" />
           </div>
           <div class="calibration-actions">
-            <button class="mini-btn" id="nudgeLrcBackBtn" type="button">整体 -100 ms</button>
-            <button class="mini-btn" id="nudgeLrcForwardBtn" type="button">整体 +100 ms</button>
-            <button class="mini-btn" id="alignCurrentLyricBtn" type="button">从当前句起对齐</button>
-            <button class="mini-btn" id="resetLrcCalibrationBtn" type="button">重置校准</button>
+            <button class="mini-btn" id="nudgeLrcBackBtn" type="button"></button>
+            <button class="mini-btn" id="nudgeLrcForwardBtn" type="button"></button>
+            <button class="mini-btn" id="alignCurrentLyricBtn" type="button"></button>
+            <button class="mini-btn" id="resetLrcCalibrationBtn" type="button"></button>
           </div>
-          <div class="hint calibration-status" id="lrcCalibrationStatus">
-            当前 LRC 没有可校准的时间标签。
-          </div>
+          <div class="hint calibration-status" id="lrcCalibrationStatus"></div>
         </div>
 
         <div class="row2">
           <div class="field">
-            <label for="fontScaleInput" id="fontScaleLabel">歌词字号</label>
+            <label for="fontScaleInput" id="fontScaleLabel"></label>
             <input type="range" id="fontScaleInput" min="80" max="140" value="100" />
           </div>
           <div class="field">
-            <label for="coverScaleInput" id="coverScaleLabel">封面尺寸</label>
+            <label for="coverScaleInput" id="coverScaleLabel"></label>
             <input type="range" id="coverScaleInput" min="26" max="42" value="35" />
           </div>
         </div>
 
         <div class="row2">
           <div class="field">
-            <label for="bgDarknessInput" id="bgDarknessLabel">背景深浅</label>
+            <label for="bgDarknessInput" id="bgDarknessLabel"></label>
             <input type="range" id="bgDarknessInput" min="30" max="100" value="72" />
           </div>
           <div class="field">
-            <label for="bgBlurInput" id="bgBlurLabel">模糊强度</label>
+            <label for="bgBlurInput" id="bgBlurLabel"></label>
             <input type="range" id="bgBlurInput" min="20" max="150" value="80" />
           </div>
         </div>
@@ -115,23 +111,18 @@
         <div class="field">
           <label class="checkbox-label">
             <input type="checkbox" id="bgAnimateInput" />
-            <span id="bgAnimateLabel">动态背景呼吸效果</span>
+            <span id="bgAnimateLabel"></span>
           </label>
         </div>
 
-        <button class="btn primary" id="playBtn" type="button" style="width: 100%;">播放 / 暂停</button>
+        <button class="btn primary" id="playBtn" type="button" style="width: 100%;"></button>
 
         <button class="btn" id="exportVideoBtn" type="button"
-          style="background: linear-gradient(135deg, rgba(255, 90, 90, 0.95), rgba(255, 120, 120, 0.84)); color: #fff; font-weight: 700;">●
-          [BETA]导出视频（保留原音频）</button>
+          style="background: linear-gradient(135deg, rgba(255, 90, 90, 0.95), rgba(255, 120, 120, 0.84)); color: #fff; font-weight: 700;"></button>
 
-        <div class="hint export-status" id="exportStatus" aria-live="polite">
-          首次导出会联网加载封装内核；如果你是直接双击打开 index.html，请改用任意本地 HTTP 服务打开后再导出。
-        </div>
+        <div class="hint export-status" id="exportStatus" aria-live="polite"></div>
 
-        <div class="hint" id="workflowHint">
-          提示：也可以使用传统工作流，切到录制模式后使用 OBS 直接采集此网页。
-        </div>
+        <div class="hint" id="workflowHint"></div>
       </div>
     </dialog>
 
@@ -143,9 +134,9 @@
         </div>
 
         <div class="meta">
-          <div class="eyebrow">Now Playing</div>
-          <h1 class="title" id="title">你的翻唱作品</h1>
-          <div class="artist" id="artist">你的名字 / 原唱信息</div>
+          <div class="eyebrow" id="eyebrow"></div>
+          <h1 class="title" id="title"></h1>
+          <div class="artist" id="artist"></div>
         </div>
       </section>
 
