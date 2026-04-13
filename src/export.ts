@@ -221,7 +221,7 @@ export const observeAudioPlaybackStart = (
 
   const handleStart = () => finalize(() => resolvePlayback(performance.now()));
   const handleError = () =>
-    finalize(() => rejectPlayback(audioElement.error || new Error('AUDIO_PLAYBACK_START_FAILED')));
+    finalize(() => rejectPlayback(new Error('AUDIO_PLAYBACK_START_FAILED')));
 
   audioElement.addEventListener('playing', handleStart, { signal });
   audioElement.addEventListener('timeupdate', handleStart, { signal });

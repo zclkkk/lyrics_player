@@ -103,6 +103,7 @@ export const getDominantColors = (image: HTMLImageElement): DominantColorsResult
 };
 
 export const applyAccent = (colors: ColorRGB[]): void => {
+  if (colors.length < 4) return;
   const s = document.documentElement.style;
   s.setProperty('--accent-rgb', colors[1]!.join(', '));
   s.setProperty('--accent-2-rgb', colors[2]!.join(', '));

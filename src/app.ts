@@ -1081,10 +1081,25 @@ export const init = () => {
   applyLyricsData([]);
   syncTextInputs();
   bindEvents();
-  handleFontScale(new Event('input'));
-  handleCoverScale(new Event('input'));
-  handleBgDarkness(new Event('input'));
-  handleBgBlur(new Event('input'));
+
+  const fontScale = Number(elements.fontScaleInput.value) / 100;
+  document.documentElement.style.setProperty('--lyrics-scale', String(fontScale));
+
+  const minSlider = 26;
+  const maxSlider = 42;
+  const minCoverSize = 280;
+  const maxCoverSize = 440;
+  const coverSliderValue = Number(elements.coverScaleInput.value);
+  const coverRatio = (coverSliderValue - minSlider) / (maxSlider - minSlider);
+  const coverSize = Math.round(minCoverSize + (maxCoverSize - minCoverSize) * coverRatio);
+  document.documentElement.style.setProperty('--cover-size', `${coverSize}px`);
+
+  const bgDarkness = Number(elements.bgDarknessInput.value) / 100;
+  document.documentElement.style.setProperty('--bg-darkness', String(bgDarkness));
+
+  const bgBlur = Number(elements.bgBlurInput.value);
+  document.documentElement.style.setProperty('--bg-blur', `${bgBlur}px`);
+
   loadDemo();
   updateExportUi();
 };
