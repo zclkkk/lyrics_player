@@ -57,6 +57,7 @@ const observeStart = ({
     "abort",
     () => {
       if (hasStarted()) handleStart();
+      else finalize(() => reject(new Error("OBSERVE_START_TIMEOUT")));
     },
     { once: true, signal },
   );
