@@ -1,29 +1,76 @@
 # 歌词录制页
 
-一个整理过的单页小项目，用来做翻唱投稿、歌词同步和录屏展示。
+AppleMusic 风格的歌词录制与展示工具，支持 LRC 歌词同步、视频导出等功能。
 
-## 目录结构
+## 技术栈
 
-`index.html`：页面入口和结构
+- **Vite 6** - 下一代前端构建工具
+- **TypeScript 5.8** - 类型安全的 JavaScript 超集
+- **FFmpeg WASM** - 浏览器端音视频处理
+- **现代 CSS** - 嵌套语法、@property、容器查询
 
-`styles/main.css`：页面样式
+## 项目结构
 
-`scripts/app.js`：主交互逻辑、导出和音频同步
+```
+lyrics_next/
+├── src/
+│   ├── main.ts          # 应用入口
+│   ├── app.ts           # 核心应用逻辑
+│   ├── types.ts         # TypeScript 类型定义
+│   ├── text.ts          # 文本/本地化内容
+│   ├── lrc.ts           # LRC 歌词解析
+│   ├── color.ts         # 封面取色与主题
+│   ├── export.ts        # 视频导出功能
+│   ├── utils.ts         # 工具函数
+│   ├── vite-env.d.ts    # Vite 环境类型
+│   └── styles/
+│       └── main.css     # 样式文件
+├── index.html           # 页面入口
+├── package.json         # 依赖配置
+├── tsconfig.json        # TypeScript 配置
+├── vite.config.ts       # Vite 配置
+└── biome.json           # 代码质量配置
+```
 
-`scripts/lrc.js`：LRC 歌词解析
+## 开发
 
-`scripts/utils.js`：格式化、防抖等通用工具函数
+```bash
+# 安装依赖
+npm install
 
-`scripts/color.js`：封面取色与主题色提取
+# 启动开发服务器
+npm run dev
 
-`vendor/ffmpeg/`：FFmpeg WASM 前端封装（用于导出视频）
+# 类型检查
+npm run typecheck
+
+# 构建生产版本
+npm run build
+
+# 预览生产构建
+npm run preview
+```
+
+## 功能特性
+
+- 🎵 **LRC 歌词同步** - 支持时间标签解析与实时同步
+- 🎨 **动态主题** - 根据封面自动提取主题色
+- 📹 **视频导出** - 使用 FFmpeg WASM 在浏览器内导出 MKV 视频
+- ⌨️ **键盘快捷键** - 空格播放/暂停、R 切换录制模式、H 隐藏面板
+- 📱 **响应式设计** - 桌面端优化，移动端显示提示
 
 ## 使用方式
 
-请用任意本地 HTTP 服务打开项目目录，例如运行 `python -m http.server 8000` 后，在浏览器中访问 `http://127.0.0.1:8000`。
+1. 导入封面图片、音频文件和 LRC 歌词
+2. 调整歌词字号、封面尺寸、背景效果等参数
+3. 点击播放预览效果
+4. 使用录制模式配合 OBS 或系统录屏采集
+5. 或使用内置导出功能直接生成视频文件
 
-导入封面、音频和 LRC 后即可预览；切到录制模式后，可以配合 OBS 或系统录屏使用。
+## 浏览器兼容性
 
-点击“导出视频（保留原音频）”后，页面会先录制画面，再在浏览器内自动把你导入的原始音频封装进最终视频文件。
+本项目使用现代 Web 技术，仅支持最新版本的 Chrome、Edge、Firefox 和 Safari。
 
-首次导出会联网加载 FFmpeg 内核（约 31 MB）；为尽量保留原始音频，当前默认导出为 `MKV`。
+## 许可证
+
+MIT
