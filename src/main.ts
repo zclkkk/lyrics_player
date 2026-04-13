@@ -1,5 +1,5 @@
-import './styles/main.css';
-import { createState, createElements, createApp } from './app';
+import "./styles/main.css";
+import { createApp, createElements, createState } from "./app";
 
 const state = createState();
 const elements = createElements();

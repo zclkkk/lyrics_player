@@ -29,8 +29,8 @@ export interface AppState {
   pendingRecordingStartAc: AbortController | null;
   pendingPlaybackStartAc: AbortController | null;
   playbackSyncFrame: number;
-  ffmpeg: any;
-  ffmpegLoadPromise: Promise<any> | null;
+  ffmpeg: unknown;
+  ffmpegLoadPromise: Promise<unknown> | null;
   ffmpegAssetUrls: string[];
   exportJobCount: number;
   exportEndedAc: AbortController | null;

@@ -1,24 +1,35 @@
-import { debounce, formatTime, formatSignedMilliseconds, formatLrcTimestamp, getLyricPreview, getFileExtension } from './utils';
-import { parseLrc } from './lrc';
-import { getDominantColors, applyAccent } from './color';
-import { TEXT, demo } from './text';
-import type { AppState, AppElements, LyricLine } from './types';
+import { applyAccent, getDominantColors } from "./color";
 import {
-  supportsInlineExport,
-  revokeFfmpegAssetUrls,
+  EXPORT_RECORDING_MIME_TYPE,
+  clearPendingExportStartObservers,
+  downloadBlob,
   ensureFfmpeg,
+  getSafeExportBaseName,
+  muxRecordedVideo,
+  observeAudioPlaybackStart,
+  observeMediaRecorderStart,
   releaseDisplayStream,
   resetExportSession,
-  getSafeExportBaseName,
-  downloadBlob,
-  muxRecordedVideo,
-  observeMediaRecorderStart,
-  observeAudioPlaybackStart,
-  clearPendingExportStartObservers,
-  EXPORT_RECORDING_MIME_TYPE
-} from './export';
+  revokeFfmpegAssetUrls,
+  supportsInlineExport,
+} from "./export";
+import { parseLrc } from "./lrc";
+import { TEXT, demo } from "./text";
+import type { AppElements, AppState, LyricLine } from "./types";
+import {
+  debounce,
+  formatLrcTimestamp,
+  formatSignedMilliseconds,
+  formatTime,
+  getFileExtension,
+  getLyricPreview,
+} from "./utils";
 
-const $ = (id: string) => document.getElementById(id)!;
+const $ = (id: string) => {
+  const el = document.getElementById(id);
+  if (!el) throw new Error(`Element not found: ${id}`);
+  return el;
+};
 
 export const createState = (): AppState => ({
   title: TEXT.defaultTitle,
@@ -54,7 +65,7 @@ export const createState = (): AppState => ({
   lastProgressPercent: "",
   lastProgressValue: "",
   lastTimeText: "",
-  lastDurationText: ""
+  lastDurationText: "",
 });
 
 export const createElements = (): AppElements => ({
@@ -110,7 +121,7 @@ export const createElements = (): AppElements => ({
   bgBlurLabel: $("bgBlurLabel"),
   bgAnimateInput: $("bgAnimateInput") as HTMLInputElement,
   bgAnimateLabel: $("bgAnimateLabel"),
-  workflowHint: $("workflowHint")
+  workflowHint: $("workflowHint"),
 });
 
 export const createApp = (state: AppState, elements: AppElements) => {
@@ -119,7 +130,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
   };
 
   const revokeObjectUrls = () => {
-    state.objectUrls.forEach((url) => URL.revokeObjectURL(url));
+    for (const url of state.objectUrls) {
+      URL.revokeObjectURL(url);
+    }
     state.objectUrls = [];
   };
 
@@ -128,7 +141,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
       return;
     }
     URL.revokeObjectURL(url);
-    state.objectUrls = state.objectUrls.filter((trackedUrl) => trackedUrl !== url);
+    state.objectUrls = state.objectUrls.filter(
+      (trackedUrl) => trackedUrl !== url,
+    );
   };
 
   const applyLyricsData = (lyrics: LyricLine[]) => {
@@ -156,7 +171,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
         lineElement.dataset.index = String(index);
         elements.lyricsTrack.appendChild(lineElement);
       });
-      state.lyricLineElements = Array.from(elements.lyricsTrack.children) as HTMLElement[];
+      state.lyricLineElements = Array.from(
+        elements.lyricsTrack.children,
+      ) as HTMLElement[];
     }
     updateProgress();
   };
@@ -168,14 +185,14 @@ export const createApp = (state: AppState, elements: AppElements) => {
 
   const getLyricsOffsetSeconds = () => state.lyricsGlobalOffsetMs / 1000;
 
-  const getEffectiveLyricTime = (time: number) => (
-    Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time
-  );
+  const getEffectiveLyricTime = (time: number) =>
+    Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time;
 
   const getLyricsValidationMessage = () =>
     state.lyrics.find((line) => line?.isError)?.text || "";
 
-  const hasCalibratableLyrics = () => state.lyrics.some((line) => Number.isFinite(line.time));
+  const hasCalibratableLyrics = () =>
+    state.lyrics.some((line) => Number.isFinite(line.time));
 
   const getCalibrationAnchorIndex = () => {
     if (!hasCalibratableLyrics()) {
@@ -218,9 +235,12 @@ export const createApp = (state: AppState, elements: AppElements) => {
     elements.nudgeLrcBackBtn.disabled = !hasTimedLyrics || calibrationLocked;
     elements.nudgeLrcForwardBtn.disabled = !hasTimedLyrics || calibrationLocked;
     elements.alignCurrentLyricBtn.disabled = !anchorLine || calibrationLocked;
-    elements.resetLrcCalibrationBtn.disabled = !hasTimedLyrics || calibrationLocked;
+    elements.resetLrcCalibrationBtn.disabled =
+      !hasTimedLyrics || calibrationLocked;
     elements.lrcOffsetInput.value = String(state.lyricsGlobalOffsetMs);
-    elements.lrcOffsetValue.textContent = formatSignedMilliseconds(state.lyricsGlobalOffsetMs);
+    elements.lrcOffsetValue.textContent = formatSignedMilliseconds(
+      state.lyricsGlobalOffsetMs,
+    );
     if (lyricsValidationMessage) {
       elements.lrcCalibrationStatus.textContent = lyricsValidationMessage;
       return;
@@ -237,14 +257,21 @@ export const createApp = (state: AppState, elements: AppElements) => {
   };
 
   const setLyricsGlobalOffset = (nextOffsetMs: number) => {
-    const clamped = Math.max(-5000, Math.min(5000, Math.round(Number(nextOffsetMs) || 0)));
+    const clamped = Math.max(
+      -5000,
+      Math.min(5000, Math.round(Number(nextOffsetMs) || 0)),
+    );
     state.lyricsGlobalOffsetMs = clamped;
     updateProgress();
   };
 
   const shiftLyricsFromIndex = (startIndex: number, deltaSeconds: number) => {
     const anchorLine = state.lyrics[startIndex];
-    if (!anchorLine || !Number.isFinite(anchorLine.time) || !Number.isFinite(deltaSeconds)) {
+    if (
+      !anchorLine ||
+      !Number.isFinite(anchorLine.time) ||
+      !Number.isFinite(deltaSeconds)
+    ) {
       return;
     }
     let appliedDelta = deltaSeconds;
@@ -254,7 +281,10 @@ export const createApp = (state: AppState, elements: AppElements) => {
       if (!Number.isFinite(previousLine.time)) {
         continue;
       }
-      minimumDelta = Math.max(minimumDelta, previousLine.time - anchorLine.time + 0.01);
+      minimumDelta = Math.max(
+        minimumDelta,
+        previousLine.time - anchorLine.time + 0.01,
+      );
       break;
     }
     appliedDelta = Math.max(appliedDelta, minimumDelta);
@@ -267,7 +297,7 @@ export const createApp = (state: AppState, elements: AppElements) => {
       }
       return {
         ...line,
-        time: Math.max(0, line.time + appliedDelta)
+        time: Math.max(0, line.time + appliedDelta),
       };
     });
     updateProgress();
@@ -353,7 +383,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
 
   const isLrcFile = (file: File) => {
     const fileName = String(file?.name || "");
-    return fileName.toLowerCase().endsWith(".lrc") || file?.type === "text/plain";
+    return (
+      fileName.toLowerCase().endsWith(".lrc") || file?.type === "text/plain"
+    );
   };
 
   const importCoverFile = (file: File) => {
@@ -409,11 +441,17 @@ export const createApp = (state: AppState, elements: AppElements) => {
     state.currentIndex = activeIndex;
     lyricLines.forEach((lineElement, index) => {
       lineElement.classList.toggle("active", index === activeIndex);
-      lineElement.classList.toggle("near", Math.abs(index - activeIndex) <= 1 && index !== activeIndex);
+      lineElement.classList.toggle(
+        "near",
+        Math.abs(index - activeIndex) <= 1 && index !== activeIndex,
+      );
     });
-    const activeLine = activeIndex >= 0 ? lyricLines[activeIndex] : lyricLines[0];
+    const activeLine =
+      activeIndex >= 0 ? lyricLines[activeIndex] : lyricLines[0];
     if (activeLine) {
-      const viewportHeight = elements.lyricsViewport?.clientHeight || elements.lyricsTrack.clientHeight;
+      const viewportHeight =
+        elements.lyricsViewport?.clientHeight ||
+        elements.lyricsTrack.clientHeight;
       const targetOffset =
         viewportHeight / 2 - activeLine.offsetTop - activeLine.offsetHeight / 2;
       elements.app.style.setProperty("--lyrics-offset", `${targetOffset}px`);
@@ -430,7 +468,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
       state.lastProgressPercent = progressPercent;
       elements.app.style.setProperty("--progress", progressPercent);
     }
-    const progressValue = String(Math.round(progressRatio * Number(elements.progress.max)));
+    const progressValue = String(
+      Math.round(progressRatio * Number(elements.progress.max)),
+    );
     if (state.lastProgressValue !== progressValue) {
       state.lastProgressValue = progressValue;
       elements.progress.value = progressValue;
@@ -516,16 +556,19 @@ export const createApp = (state: AppState, elements: AppElements) => {
     const requestedSave = state.shouldSaveExport;
     const hasRecordedChunks = state.recordedChunks.length > 0;
     const shouldSave = requestedSave && hasRecordedChunks;
-    const recordingMimeType = state.recordedChunks[0]?.type || EXPORT_RECORDING_MIME_TYPE;
+    const recordingMimeType =
+      state.recordedChunks[0]?.type || EXPORT_RECORDING_MIME_TYPE;
     if (!shouldSave) {
       state.isMuxing = false;
-      setExportStatus(requestedSave ? TEXT.exportEmptyCaptureHint : TEXT.exportCancelledHint);
+      setExportStatus(
+        requestedSave ? TEXT.exportEmptyCaptureHint : TEXT.exportCancelledHint,
+      );
       updateExportUi();
       resetExportSession(state);
       return;
     }
     const recordedBlob = new Blob(state.recordedChunks, {
-      type: recordingMimeType
+      type: recordingMimeType,
     });
     const exportBaseName = state.exportBaseName || getSafeExportBaseName(state);
     const audioFile = state.audioFile;
@@ -533,13 +576,25 @@ export const createApp = (state: AppState, elements: AppElements) => {
     resetExportSession(state);
     setExportStatus(TEXT.exportMuxingHint);
     try {
-      const muxedBlob = await muxRecordedVideo(state, recordedBlob, audioFile!, audioLeadInMs);
+      if (!audioFile) {
+        throw new Error("EXPORT_AUDIO_FILE_MISSING");
+      }
+      const muxedBlob = await muxRecordedVideo(
+        state,
+        recordedBlob,
+        audioFile,
+        audioLeadInMs,
+      );
       downloadBlob(state, muxedBlob, `${exportBaseName}.mkv`);
       setExportStatus(TEXT.exportDoneHint);
     } catch (error) {
       console.error("Muxing failed, falling back to raw capture:", error);
       downloadBlob(state, recordedBlob, `${exportBaseName}-capture.webm`);
-      alert(error?.message === "EXPORT_AUDIO_FILE_MISSING" ? TEXT.exportRequiresOriginalAudio : TEXT.exportMuxFailed);
+      alert(
+        error?.message === "EXPORT_AUDIO_FILE_MISSING"
+          ? TEXT.exportRequiresOriginalAudio
+          : TEXT.exportMuxFailed,
+      );
       setExportStatus(TEXT.exportFallbackHint);
     } finally {
       state.isMuxing = false;
@@ -556,7 +611,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
     state.shouldSaveExport = saveExport;
     state.isMuxing = saveExport;
     updateExportUi();
-    setExportStatus(saveExport ? TEXT.exportMuxingHint : TEXT.exportCancelledHint);
+    setExportStatus(
+      saveExport ? TEXT.exportMuxingHint : TEXT.exportCancelledHint,
+    );
     if (state.mediaRecorder && state.mediaRecorder.state !== "inactive") {
       state.mediaRecorder.stop();
     } else {
@@ -593,11 +650,13 @@ export const createApp = (state: AppState, elements: AppElements) => {
         video: { displaySurface: "browser" },
         audio: false,
         preferCurrentTab: true,
-        selfBrowserSurface: "include"
+        selfBrowserSurface: "include",
       });
       const videoTrack = videoStream.getVideoTracks()[0];
       if (!videoTrack) {
-        videoStream.getTracks().forEach((track) => track.stop());
+        for (const track of videoStream.getTracks()) {
+          track.stop();
+        }
         throw new Error("EXPORT_VIDEO_TRACK_MISSING");
       }
       elements.audio.pause();
@@ -606,7 +665,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
       state.recordedChunks = [];
       state.shouldSaveExport = true;
       state.exportAudioLeadInMs = 0;
-      state.mediaRecorder = new MediaRecorder(videoStream, { mimeType: EXPORT_RECORDING_MIME_TYPE });
+      state.mediaRecorder = new MediaRecorder(videoStream, {
+        mimeType: EXPORT_RECORDING_MIME_TYPE,
+      });
       state.mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
           state.recordedChunks.push(event.data);
@@ -624,7 +685,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
       state.exportBaseName = getSafeExportBaseName(state);
       updateExportUi();
       setExportStatus(TEXT.exportRecordingHint);
-      const recordingStartObserver = observeMediaRecorderStart(state.mediaRecorder);
+      const recordingStartObserver = observeMediaRecorderStart(
+        state.mediaRecorder,
+      );
       state.pendingRecordingStartAc = recordingStartObserver.ac;
       state.mediaRecorder.start(1000);
       try {
@@ -635,11 +698,17 @@ export const createApp = (state: AppState, elements: AppElements) => {
         await elements.audio.play();
         const playbackStartedAt = await playbackStartObserver.promise;
         state.pendingPlaybackStartAc = null;
-        state.exportAudioLeadInMs = Math.max(0, playbackStartedAt - recordingStartedAt);
+        state.exportAudioLeadInMs = Math.max(
+          0,
+          playbackStartedAt - recordingStartedAt,
+        );
       } catch (error) {
         clearPendingExportStartObservers(state);
         if (
-          ["MEDIA_RECORDER_START_CANCELLED", "AUDIO_PLAYBACK_START_CANCELLED"].includes(error?.message) &&
+          [
+            "MEDIA_RECORDER_START_CANCELLED",
+            "AUDIO_PLAYBACK_START_CANCELLED",
+          ].includes(error?.message) &&
           !state.isExporting
         ) {
           return;
@@ -648,7 +717,7 @@ export const createApp = (state: AppState, elements: AppElements) => {
           error?.message === "MEDIA_RECORDER_START_FAILED"
             ? "Recorder failed to start during export:"
             : "Audio playback failed during export:",
-          error
+          error,
         );
         stopExporting(false);
         return;
@@ -657,7 +726,10 @@ export const createApp = (state: AppState, elements: AppElements) => {
         return;
       }
       state.exportEndedAc = new AbortController();
-      elements.audio.addEventListener("ended", () => stopExporting(), { once: true, signal: state.exportEndedAc.signal });
+      elements.audio.addEventListener("ended", () => stopExporting(), {
+        once: true,
+        signal: state.exportEndedAc.signal,
+      });
     } catch (err) {
       console.error("Recording failed or rejected:", err);
       if (state.isExporting || state.mediaRecorder || state.displayStream) {
@@ -706,7 +778,10 @@ export const createApp = (state: AppState, elements: AppElements) => {
     }
     const max = Number(elements.progress.max) || 1000;
     const ratio = Math.min(1, Math.max(0, Number(rawValue) / max));
-    if (Number.isFinite(elements.audio.duration) && elements.audio.duration > 0) {
+    if (
+      Number.isFinite(elements.audio.duration) &&
+      elements.audio.duration > 0
+    ) {
       elements.audio.currentTime = ratio * elements.audio.duration;
       updateProgress();
     }
@@ -715,7 +790,9 @@ export const createApp = (state: AppState, elements: AppElements) => {
   const setRecordingMode = (enabled: boolean) => {
     state.recordingMode = enabled;
     document.body.classList.toggle("recording-mode", enabled);
-    elements.toggleRecordingBtn.textContent = enabled ? TEXT.exitRecordingMode : TEXT.recordingMode;
+    elements.toggleRecordingBtn.textContent = enabled
+      ? TEXT.exitRecordingMode
+      : TEXT.recordingMode;
   };
 
   const setPanelHidden = (hidden: boolean) => {
@@ -758,12 +835,16 @@ export const createApp = (state: AppState, elements: AppElements) => {
 
   const handleCoverUpload = (event: Event) => {
     const file = (event.target as HTMLInputElement).files?.[0];
-    importCoverFile(file!);
+    if (file) {
+      importCoverFile(file);
+    }
   };
 
   const handleAudioUpload = (event: Event) => {
     const file = (event.target as HTMLInputElement).files?.[0];
-    importAudioFile(file!);
+    if (file) {
+      importAudioFile(file);
+    }
   };
 
   const handleFontScale = (event: Event) => {
@@ -779,8 +860,13 @@ export const createApp = (state: AppState, elements: AppElements) => {
     const maxCoverSize = 440;
     const sliderValue = Number((event.target as HTMLInputElement).value);
     const ratio = (sliderValue - minSlider) / (maxSlider - minSlider);
-    const coverSize = Math.round(minCoverSize + (maxCoverSize - minCoverSize) * ratio);
-    document.documentElement.style.setProperty("--cover-size", `${coverSize}px`);
+    const coverSize = Math.round(
+      minCoverSize + (maxCoverSize - minCoverSize) * ratio,
+    );
+    document.documentElement.style.setProperty(
+      "--cover-size",
+      `${coverSize}px`,
+    );
   };
 
   const handleBgDarkness = (event: Event) => {
@@ -796,7 +882,10 @@ export const createApp = (state: AppState, elements: AppElements) => {
   const handleBgAnimate = (event: Event) => {
     const bgElement = document.querySelector(".bg");
     if (bgElement) {
-      bgElement.classList.toggle("animate", (event.target as HTMLInputElement).checked);
+      bgElement.classList.toggle(
+        "animate",
+        (event.target as HTMLInputElement).checked,
+      );
     }
   };
 
@@ -894,14 +983,28 @@ export const createApp = (state: AppState, elements: AppElements) => {
     elements.bgBlurInput.addEventListener("input", handleBgBlur);
     elements.bgAnimateInput.addEventListener("change", handleBgAnimate);
     elements.lrcOffsetInput.addEventListener("input", handleLyricsOffsetInput);
-    elements.nudgeLrcBackBtn.addEventListener("click", () => handleLyricsNudge(-100));
-    elements.nudgeLrcForwardBtn.addEventListener("click", () => handleLyricsNudge(100));
-    elements.alignCurrentLyricBtn.addEventListener("click", alignLyricsFromCurrentLine);
-    elements.resetLrcCalibrationBtn.addEventListener("click", resetLyricsCalibration);
+    elements.nudgeLrcBackBtn.addEventListener("click", () =>
+      handleLyricsNudge(-100),
+    );
+    elements.nudgeLrcForwardBtn.addEventListener("click", () =>
+      handleLyricsNudge(100),
+    );
+    elements.alignCurrentLyricBtn.addEventListener(
+      "click",
+      alignLyricsFromCurrentLine,
+    );
+    elements.resetLrcCalibrationBtn.addEventListener(
+      "click",
+      resetLyricsCalibration,
+    );
     elements.playBtn.addEventListener("click", togglePlayback);
     elements.exportVideoBtn.addEventListener("click", handleExportButtonClick);
-    elements.togglePanelBtn.addEventListener("click", () => setPanelHidden(!state.panelHidden));
-    elements.toggleRecordingBtn.addEventListener("click", () => setRecordingMode(!state.recordingMode));
+    elements.togglePanelBtn.addEventListener("click", () =>
+      setPanelHidden(!state.panelHidden),
+    );
+    elements.toggleRecordingBtn.addEventListener("click", () =>
+      setRecordingMode(!state.recordingMode),
+    );
     elements.loadDemoBtn.addEventListener("click", loadDemo);
     elements.resetViewBtn.addEventListener("click", () => {
       elements.audio.currentTime = 0;
@@ -922,11 +1025,17 @@ export const createApp = (state: AppState, elements: AppElements) => {
       seekByProgressValue(Number((event.target as HTMLInputElement).value));
     });
     window.addEventListener("keydown", (event) => {
-      if (event.target && ["INPUT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)) {
+      if (
+        event.target &&
+        ["INPUT", "TEXTAREA"].includes((event.target as HTMLElement).tagName)
+      ) {
         return;
       }
       if (event.code === "Space") {
-        if (event.target && ["BUTTON", "SELECT"].includes((event.target as HTMLElement).tagName)) {
+        if (
+          event.target &&
+          ["BUTTON", "SELECT"].includes((event.target as HTMLElement).tagName)
+        ) {
           return;
         }
         if (isPlaybackInteractionLocked()) {
@@ -965,7 +1074,8 @@ export const createApp = (state: AppState, elements: AppElements) => {
         return;
       }
       if (event.key.toLowerCase() === "h") {
-        if (state.isExporting || state.isMuxing || state.ffmpegLoadPromise) return;
+        if (state.isExporting || state.isMuxing || state.ffmpegLoadPromise)
+          return;
         setPanelHidden(!state.panelHidden);
         return;
       }
@@ -975,7 +1085,7 @@ export const createApp = (state: AppState, elements: AppElements) => {
         }
         elements.audio.currentTime = Math.min(
           elements.audio.duration || 0,
-          (elements.audio.currentTime || 0) + 5
+          (elements.audio.currentTime || 0) + 5,
         );
         updateProgress();
         return;
@@ -984,7 +1094,10 @@ export const createApp = (state: AppState, elements: AppElements) => {
         if (isPlaybackInteractionLocked()) {
           return;
         }
-        elements.audio.currentTime = Math.max(0, (elements.audio.currentTime || 0) - 5);
+        elements.audio.currentTime = Math.max(
+          0,
+          (elements.audio.currentTime || 0) - 5,
+        );
         updateProgress();
       }
     });

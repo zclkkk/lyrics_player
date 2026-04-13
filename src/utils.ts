@@ -1,4 +1,7 @@
-export const debounce = <T extends (...args: any[]) => any>(fn: T, ms: number) => {
+export const debounce = <T extends (...args: unknown[]) => unknown>(
+  fn: T,
+  ms: number,
+) => {
   let timer = 0;
   return (...args: Parameters<T>) => {
     clearTimeout(timer);

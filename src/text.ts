@@ -1,4 +1,4 @@
-import type { TextConstants, DemoData } from "./types";
+import type { DemoData, TextConstants } from "./types";
 
 export const TEXT: TextConstants = {
   pageTitle: "AppleMusic 风格歌词录制页",
@@ -16,9 +16,11 @@ export const TEXT: TextConstants = {
   audioLabel: "音频",
   audioPicker: "选择音频文件",
   lrcLabel: "LRC 歌词",
-  lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
+  lrcPlaceholder:
+    "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
   lrcCalibrationLabel: "歌词校准",
-  lrcCalibrationHint: "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。",
+  lrcCalibrationHint:
+    "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。",
   lrcOffsetLabel: "整体偏移",
   lrcNudgeBack: "整体 -100 ms",
   lrcNudgeForward: "整体 +100 ms",
@@ -38,26 +40,30 @@ export const TEXT: TextConstants = {
   exportIdleHint: "首次导出会联网加载 FFmpeg 内核（约 31 MB）。",
   exportPreparingHint: "正在联网加载 FFmpeg 内核，首次可能需要几十秒，请稍候。",
   exportPickTabHint: "请在浏览器弹窗中选择当前标签页，确认后开始录制。",
-  exportRecordingHint: "正在录制画面；录制结束后会自动把你导入的原始音频封装进 MKV。",
+  exportRecordingHint:
+    "正在录制画面；录制结束后会自动把你导入的原始音频封装进 MKV。",
   exportMuxingHint: "正在把录制画面与原始音频封装到同一个 MKV 文件中。",
   exportDoneHint: "导出完成，已下载包含原始音频的 MKV 文件。",
   exportCancelledHint: "已取消导出。",
   exportEmptyCaptureHint: "录制结束过快，未捕获到任何画面，请重试。",
   exportFallbackHint: "原音频封装失败，已回退下载纯画面录制文件。",
   exportRequiresAudio: "请先导入音频文件！",
-  exportRequiresOriginalAudio: "请通过文件选择或拖拽导入原始音频后再导出，这样才能保留原音频。",
-  exportUnsupported: "当前浏览器不支持网页录屏导出，请改用新版 Chrome / Edge 或 OBS。",
+  exportRequiresOriginalAudio:
+    "请通过文件选择或拖拽导入原始音频后再导出，这样才能保留原音频。",
+  exportUnsupported:
+    "当前浏览器不支持网页录屏导出，请改用新版 Chrome / Edge 或 OBS。",
   exportEngineFailed: "导出内核加载失败。请检查网络后重试。",
   exportStartFailed: "一键导出启动失败，请重试，或改用 OBS / 系统录屏。",
   exportMuxFailed: "原音频封装失败，已回退为纯画面录制文件。",
-  workflowHint: "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
+  workflowHint:
+    "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
   coverAlt: "歌曲封面",
   defaultTitle: "你的翻唱作品",
   defaultArtist: "你的名字 / 原唱信息",
   untitledSong: "未命名作品",
   unknownArtist: "未知歌手",
   demoTitle: "夜空中最亮的星（翻唱）",
-  demoArtist: "你的名字 · Cover"
+  demoArtist: "你的名字 · Cover",
 };
 
 export const demo: DemoData = {
@@ -81,5 +87,5 @@ export const demo: DemoData = {
 [01:19.60]每当我找不到存在的意义
 [01:26.00]每当我迷失在黑夜里
 [01:31.40]夜空中最亮的星
-[01:36.00]请指引我靠近你`
+[01:36.00]请指引我靠近你`,
 };

@@ -17,26 +17,41 @@ const collectPixels = (imageData: ImageData) => {
 const medianCut = (pixels: number[][], depth: number): number[][] => {
   if (depth === 0 || pixels.length < 2) {
     if (pixels.length === 0) return [[128, 128, 128]];
-    let rS = 0, gS = 0, bS = 0;
-    for (const [r, g, b] of pixels) { rS += r; gS += g; bS += b; }
+    let rS = 0;
+    let gS = 0;
+    let bS = 0;
+    for (const [r, g, b] of pixels) {
+      rS += r;
+      gS += g;
+      bS += b;
+    }
     const n = pixels.length;
     return [[Math.round(rS / n), Math.round(gS / n), Math.round(bS / n)]];
   }
-  let rMin = 255, rMax = 0, gMin = 255, gMax = 0, bMin = 255, bMax = 0;
+  let rMin = 255;
+  let rMax = 0;
+  let gMin = 255;
+  let gMax = 0;
+  let bMin = 255;
+  let bMax = 0;
   for (const [r, g, b] of pixels) {
-    if (r < rMin) rMin = r; if (r > rMax) rMax = r;
-    if (g < gMin) gMin = g; if (g > gMax) gMax = g;
-    if (b < bMin) bMin = b; if (b > bMax) bMax = b;
+    if (r < rMin) rMin = r;
+    if (r > rMax) rMax = r;
+    if (g < gMin) gMin = g;
+    if (g > gMax) gMax = g;
+    if (b < bMin) bMin = b;
+    if (b > bMax) bMax = b;
   }
   const rRange = rMax - rMin;
   const gRange = gMax - gMin;
   const bRange = bMax - bMin;
-  const ch = rRange >= gRange && rRange >= bRange ? 0 : gRange >= bRange ? 1 : 2;
+  const ch =
+    rRange >= gRange && rRange >= bRange ? 0 : gRange >= bRange ? 1 : 2;
   pixels.sort((a, b) => a[ch] - b[ch]);
   const mid = pixels.length >> 1;
   return [
     ...medianCut(pixels.slice(0, mid), depth - 1),
-    ...medianCut(pixels.slice(mid), depth - 1)
+    ...medianCut(pixels.slice(mid), depth - 1),
   ];
 };
 
@@ -45,7 +60,7 @@ const boostSaturation = ([r, g, b]: number[], factor: number) => {
   return [
     Math.min(255, Math.max(0, Math.round(gray + (r - gray) * factor))),
     Math.min(255, Math.max(0, Math.round(gray + (g - gray) * factor))),
-    Math.min(255, Math.max(0, Math.round(gray + (b - gray) * factor)))
+    Math.min(255, Math.max(0, Math.round(gray + (b - gray) * factor))),
   ];
 };
 
@@ -55,7 +70,7 @@ const FALLBACK_COLORS = [
   [160, 80, 120],
   [255, 116, 116],
   [255, 196, 124],
-  [140, 190, 255]
+  [140, 190, 255],
 ];
 
 export const getDominantColors = (image: HTMLImageElement) => {
@@ -64,8 +79,8 @@ export const getDominantColors = (image: HTMLImageElement) => {
   const size = 64;
   canvas.width = size;
   canvas.height = size;
-  ctx!.drawImage(image, 0, 0, size, size);
-  const pixels = collectPixels(ctx!.getImageData(0, 0, size, size));
+  ctx?.drawImage(image, 0, 0, size, size);
+  const pixels = collectPixels(ctx?.getImageData(0, 0, size, size));
   if (pixels.length < 8) {
     return { colors: FALLBACK_COLORS };
   }
