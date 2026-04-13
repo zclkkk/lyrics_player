@@ -1,0 +1,85 @@
+import type { TextConstants, DemoData } from "./types";
+
+export const TEXT: TextConstants = {
+  pageTitle: "AppleMusic 风格歌词录制页",
+  panelButton: "面板",
+  recordingMode: "录制模式",
+  exitRecordingMode: "退出录制模式",
+  shortcuts: "空格 播放 / 暂停 · R 录制模式 · H 隐藏面板",
+  panelTitle: "录制控制台",
+  loadDemo: "加载示例",
+  resetView: "回到开头",
+  songTitleLabel: "歌名",
+  artistLabel: "歌手 / 署名",
+  coverLabel: "封面",
+  coverPicker: "选择封面图片",
+  audioLabel: "音频",
+  audioPicker: "选择音频文件",
+  lrcLabel: "LRC 歌词",
+  lrcPlaceholder: "粘贴 .lrc 内容，例如：\n[00:00.00]你的翻唱标题\n[00:12.30]第一句歌词",
+  lrcCalibrationLabel: "歌词校准",
+  lrcCalibrationHint: "整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。",
+  lrcOffsetLabel: "整体偏移",
+  lrcNudgeBack: "整体 -100 ms",
+  lrcNudgeForward: "整体 +100 ms",
+  lrcAlignCurrent: "从当前句起对齐",
+  lrcReset: "重置校准",
+  lrcCalibrationEmpty: "当前 LRC 没有可校准的时间标签。",
+  fontScaleLabel: "歌词字号",
+  coverScaleLabel: "封面尺寸",
+  bgDarknessLabel: "背景深浅",
+  bgBlurLabel: "模糊强度",
+  bgAnimateLabel: "动态背景呼吸效果",
+  playPause: "播放 / 暂停",
+  exportButton: "● [BETA]导出视频（保留原音频）",
+  exportStopButton: "■ 结束录制并封装",
+  exportPreparingButton: "正在准备导出引擎…",
+  exportMuxingButton: "正在封装原音频…",
+  exportIdleHint: "首次导出会联网加载 FFmpeg 内核（约 31 MB）。",
+  exportPreparingHint: "正在联网加载 FFmpeg 内核，首次可能需要几十秒，请稍候。",
+  exportPickTabHint: "请在浏览器弹窗中选择当前标签页，确认后开始录制。",
+  exportRecordingHint: "正在录制画面；录制结束后会自动把你导入的原始音频封装进 MKV。",
+  exportMuxingHint: "正在把录制画面与原始音频封装到同一个 MKV 文件中。",
+  exportDoneHint: "导出完成，已下载包含原始音频的 MKV 文件。",
+  exportCancelledHint: "已取消导出。",
+  exportEmptyCaptureHint: "录制结束过快，未捕获到任何画面，请重试。",
+  exportFallbackHint: "原音频封装失败，已回退下载纯画面录制文件。",
+  exportRequiresAudio: "请先导入音频文件！",
+  exportRequiresOriginalAudio: "请通过文件选择或拖拽导入原始音频后再导出，这样才能保留原音频。",
+  exportUnsupported: "当前浏览器不支持网页录屏导出，请改用新版 Chrome / Edge 或 OBS。",
+  exportEngineFailed: "导出内核加载失败。请检查网络后重试。",
+  exportStartFailed: "一键导出启动失败，请重试，或改用 OBS / 系统录屏。",
+  exportMuxFailed: "原音频封装失败，已回退为纯画面录制文件。",
+  workflowHint: "建议工作流：导入封面、音频、LRC，点播放后切到录制模式，再用 OBS 或系统录屏采集这个页面。拖动底部进度条可以定位到任意时间。",
+  coverAlt: "歌曲封面",
+  defaultTitle: "你的翻唱作品",
+  defaultArtist: "你的名字 / 原唱信息",
+  untitledSong: "未命名作品",
+  unknownArtist: "未知歌手",
+  demoTitle: "夜空中最亮的星（翻唱）",
+  demoArtist: "你的名字 · Cover"
+};
+
+export const demo: DemoData = {
+  title: TEXT.demoTitle,
+  artist: TEXT.demoArtist,
+  lrc: `[00:00.00]夜空中最亮的星（翻唱）
+[00:04.00]你的名字 · Cover
+[00:10.40]夜空中最亮的星
+[00:15.30]能否听清
+[00:20.10]那仰望的人
+[00:24.40]心底的孤独和叹息
+[00:31.10]夜空中最亮的星
+[00:35.90]能否记起
+[00:40.60]曾与我同行
+[00:45.00]消失在风里的身影
+[00:52.00]
+[00:56.50]我祈祷拥有一颗透明的心灵
+[01:03.00]和会流泪的眼睛
+[01:08.30]给我再去相信的勇气
+[01:13.80]越过谎言去拥抱你
+[01:19.60]每当我找不到存在的意义
+[01:26.00]每当我迷失在黑夜里
+[01:31.40]夜空中最亮的星
+[01:36.00]请指引我靠近你`
+};
