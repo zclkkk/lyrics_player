@@ -614,6 +614,7 @@ const updateLyrics = (force = false) => {
   const previousActiveIndex = state.currentIndex;
 
   if (!force && activeIndex === previousActiveIndex) {
+    updateLyricCalibrationUi();
     return;
   }
 
