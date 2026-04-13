@@ -3,8 +3,8 @@ import {
 	EXPORT_RECORDING_MIME_TYPE,
 	downloadBlob,
 	ensureFfmpeg,
-	finalizeRecordedVideo,
 	getSafeExportBaseName,
+	muxRecordedVideo,
 	observeAudioPlaybackStart,
 	observeMediaRecorderStart,
 	releaseDisplayStream,
@@ -726,7 +726,6 @@ export class LyricsApp {
 
 		try {
 			if (this.ffmpegRef.current && audioFile) {
-				const { muxRecordedVideo } = await import('./export');
 				const muxedBlob = await muxRecordedVideo(
 					this.ffmpegRef.current,
 					recordedBlob,
