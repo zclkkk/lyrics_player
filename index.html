@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="color-scheme" content="dark" />
   <title>AppleMusic 风格歌词录制页</title>
-  <link rel="stylesheet" href="./styles/main.css" />
+  <link rel="stylesheet" href="/src/styles/main.css" />
 </head>
 
 <body>
@@ -74,7 +74,7 @@
             <div class="value-pill" id="lrcOffsetValue">0 ms</div>
           </div>
           <div class="hint" id="lrcCalibrationHint">
-            整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点“从当前句起对齐”。
+            整首都快或慢一点时，用整体偏移；从某一句开始偏时，先播放到那句，再点"从当前句起对齐"。
           </div>
           <div class="field calibration-slider">
             <label for="lrcOffsetInput" id="lrcOffsetLabel">整体偏移</label>
@@ -127,7 +127,7 @@
           [BETA]导出视频（保留原音频）</button>
 
         <div class="hint export-status" id="exportStatus" aria-live="polite">
-          首次导出会联网加载封装内核；如果你是直接双击打开 index.html，请改用任意本地 HTTP 服务打开后再导出。
+          首次导出会联网加载 FFmpeg 内核（约 31 MB）。
         </div>
 
         <div class="hint" id="workflowHint">
@@ -167,23 +167,7 @@
     <audio id="audio"></audio>
   </div>
 
-  <script>
-    if (location.protocol === "file:") {
-      const message = document.createElement("p");
-      message.style.cssText = "max-width:480px;margin:15vh auto;padding:32px;font:16px/1.8 system-ui,sans-serif;color:#e8e8e8;background:#1a1a1a;border-radius:20px;text-align:center;";
-      message.innerHTML = `
-        <strong style="font-size:20px;display:block;margin-bottom:12px;">&#9888; 请通过 HTTP 服务打开</strong>
-        本项目使用 ES 模块，无法通过直接双击 index.html 运行。<br><br>
-        请使用任意本地 HTTP 服务，例如：<br>
-        <code style="background:#333;padding:2px 8px;border-radius:8px;">python -m http.server 8000</code><br>
-        然后访问 <code style="background:#333;padding:2px 8px;border-radius:8px;">http://127.0.0.1:8000</code>
-      `;
-      document.body.replaceChildren(message);
-      throw new Error("file:// protocol is not supported");
-    }
-  </script>
-  <script src="./vendor/ffmpeg/ffmpeg.js"></script>
-  <script type="module" src="./scripts/app.js"></script>
+  <script type="module" src="/src/main.ts"></script>
 </body>
 
 </html>

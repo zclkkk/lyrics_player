@@ -1,13 +1,17 @@
-export const parseLrc = (text) => {
+export interface LyricLine {
+  time: number;
+  text: string;
+  isError?: boolean;
+}
+
+export const parseLrc = (text: string): LyricLine[] => {
   const normalizedText = String(text || "").replace(/\r/g, "");
 
-  if (!normalizedText.trim()) {
-    return [];
-  }
+  if (!normalizedText.trim()) return [];
 
   const rows = normalizedText.split("\n");
   const timePattern = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
-  const lines = [];
+  const lines: LyricLine[] = [];
 
   for (const row of rows) {
     const content = row.replace(timePattern, "").trim();
@@ -18,22 +22,24 @@ export const parseLrc = (text) => {
       const minutes = Number(match[1] || 0);
       const seconds = Number(match[2] || 0);
       const fractionText = match[3] || "0";
-      const fraction = Number(fractionText.padEnd(3, '0')) / 1000;
+      const fraction = Number(fractionText.padEnd(3, "0")) / 1000;
 
       lines.push({
         time: minutes * 60 + seconds + fraction,
-        text: content || " "
+        text: content || " ",
       });
     }
 
     if (!matched && row.trim()) {
       const trimmed = row.trim();
       if (!/^\[[a-z]+:/i.test(trimmed)) {
-        return [{
-          time: Number.POSITIVE_INFINITY,
-          text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】",
-          isError: true
-        }];
+        return [
+          {
+            time: Number.POSITIVE_INFINITY,
+            text: "【LRC 格式异常：存在无时间标签的行，请补全后导入】",
+            isError: true,
+          },
+        ];
       }
       lines.push({ time: Number.POSITIVE_INFINITY, text: trimmed });
     }
