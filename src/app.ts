@@ -11,33 +11,9 @@ import {
   supportsInlineExport,
 } from "./export";
 import { parseLrc } from "./lrc";
-import { TEXT } from "./text";
+import { DEMO, TEXT } from "./text";
 import type { LyricLine } from "./types";
 import { debounce, formatLrcTimestamp, formatSignedMilliseconds, formatTime, getLyricPreview } from "./utils";
-
-const demo = {
-  title: TEXT.demoTitle,
-  artist: TEXT.demoArtist,
-  lrc: `[00:00.00]夜空中最亮的星（翻唱）
-[00:04.00]你的名字 · Cover
-[00:10.40]夜空中最亮的星
-[00:15.30]能否听清
-[00:20.10]那仰望的人
-[00:24.40]心底的孤独和叹息
-[00:31.10]夜空中最亮的星
-[00:35.90]能否记起
-[00:40.60]曾与我同行
-[00:45.00]消失在风里的身影
-[00:52.00]
-[00:56.50]我祈祷拥有一颗透明的心灵
-[01:03.00]和会流泪的眼睛
-[01:08.30]给我再去相信的勇气
-[01:13.80]越过谎言去拥抱你
-[01:19.60]每当我找不到存在的意义
-[01:26.00]每当我迷失在黑夜里
-[01:31.40]夜空中最亮的星
-[01:36.00]请指引我靠近你`,
-} as const;
 
 // biome-ignore lint/suspicious/noExplicitAny: abstract constructor signature requires any[]
 const getEl = <T extends Element>(sel: string, type: abstract new (...args: any[]) => T): T => {
@@ -835,11 +811,11 @@ const doDownload = (blob: Blob, filename: string) => {
 };
 
 const loadDemo = () => {
-  state.title = demo.title;
-  state.artist = demo.artist;
-  el.lrcInput.value = demo.lrc;
+  state.title = DEMO.title;
+  state.artist = DEMO.artist;
+  el.lrcInput.value = DEMO.lrc;
   syncTextInputs();
-  applyLyricsText(demo.lrc);
+  applyLyricsText(DEMO.lrc);
 
   const svg = encodeURIComponent(`
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200">
