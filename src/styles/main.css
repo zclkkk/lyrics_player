@@ -475,13 +475,6 @@ select {
     opacity: 0.85;
   }
 
-  &.error {
-    color: rgba(255, 238, 238, 0.96);
-    filter: none;
-    opacity: 0.94;
-    text-shadow: 0 0 18px rgba(255, 120, 120, 0.14);
-  }
-
   &.empty {
     opacity: 0.32;
   }

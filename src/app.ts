@@ -246,66 +246,46 @@ const applyLyricsData = (lyrics: LyricLine[]) => {
 
 const getLyricsOffsetSeconds = () => state.lyricsGlobalOffsetMs / 1000;
 
-const getEffectiveLyricTime = (time: number) => (Number.isFinite(time) ? time + getLyricsOffsetSeconds() : time);
-
-const getLyricsValidationMessage = () => state.lyrics.find((line) => line.isError)?.text || "";
-
-const hasCalibratableLyrics = () => state.lyrics.some((line) => Number.isFinite(line.time));
+const getEffectiveLyricTime = (time: number) => time + getLyricsOffsetSeconds();
 
 const getCalibrationAnchorIndex = () => {
-  if (!hasCalibratableLyrics()) {
+  if (state.lyrics.length === 0) {
     return -1;
   }
 
   if (state.currentIndex >= 0) {
-    const currentLine = state.lyrics[state.currentIndex];
-
-    if (currentLine && Number.isFinite(currentLine.time)) {
-      return state.currentIndex;
-    }
+    return state.currentIndex;
   }
 
   const currentTime = el.audio.currentTime || 0;
 
-  for (let index = 0; index < state.lyrics.length; ++index) {
-    const line = state.lyrics[index];
-
-    if (!line || !Number.isFinite(line.time)) {
-      continue;
-    }
-
+  for (const [index, line] of state.lyrics.entries()) {
     if (getEffectiveLyricTime(line.time) >= currentTime) {
       return index;
     }
   }
 
-  return state.lyrics.findLastIndex((line) => Number.isFinite(line.time));
+  return state.lyrics.length - 1;
 };
 
 const isLyricCalibrationLocked = () => isExportBusy();
 
 const updateLyricCalibrationUi = () => {
-  const lyricsValidationMessage = getLyricsValidationMessage();
-  const hasTimedLyrics = hasCalibratableLyrics();
+  const hasLyrics = state.lyrics.length > 0;
   const anchorIndex = getCalibrationAnchorIndex();
   const anchorLine = anchorIndex >= 0 ? state.lyrics[anchorIndex] : undefined;
   const calibrationLocked = isLyricCalibrationLocked();
 
-  el.lrcOffsetInput.disabled = !hasTimedLyrics || calibrationLocked;
-  el.nudgeLrcBackBtn.disabled = !hasTimedLyrics || calibrationLocked;
-  el.nudgeLrcForwardBtn.disabled = !hasTimedLyrics || calibrationLocked;
+  el.lrcOffsetInput.disabled = !hasLyrics || calibrationLocked;
+  el.nudgeLrcBackBtn.disabled = !hasLyrics || calibrationLocked;
+  el.nudgeLrcForwardBtn.disabled = !hasLyrics || calibrationLocked;
   el.alignCurrentLyricBtn.disabled = !anchorLine || calibrationLocked;
-  el.resetLrcCalibrationBtn.disabled = !hasTimedLyrics || calibrationLocked;
+  el.resetLrcCalibrationBtn.disabled = !hasLyrics || calibrationLocked;
 
   el.lrcOffsetInput.value = String(state.lyricsGlobalOffsetMs);
   el.lrcOffsetValue.textContent = formatSignedMilliseconds(state.lyricsGlobalOffsetMs);
 
-  if (lyricsValidationMessage) {
-    el.lrcCalibrationStatus.textContent = lyricsValidationMessage;
-    return;
-  }
-
-  if (!hasTimedLyrics) {
+  if (!hasLyrics) {
     el.lrcCalibrationStatus.textContent = TEXT.lrcCalibrationEmpty;
     return;
   }
@@ -361,7 +341,6 @@ const syncLyricsUi = ({ rerender = false }: { rerender?: boolean } = {}) => {
       const div = document.createElement("div");
       div.classList.add("lyric-line");
       if (!(line.text || "").trim()) div.classList.add("empty");
-      if (line.isError) div.classList.add("error");
       div.textContent = line.text || " ";
       div.dataset.index = String(i);
       el.lyricsTrack.appendChild(div);
@@ -387,22 +366,17 @@ const setLyricsGlobalOffset = (nextOffsetMs: string | number) => {
 const shiftLyricsFromIndex = (startIndex: number, deltaSeconds: number) => {
   const anchorLine = state.lyrics[startIndex];
 
-  if (!anchorLine || !Number.isFinite(anchorLine.time) || !Number.isFinite(deltaSeconds)) {
+  if (!anchorLine || !Number.isFinite(deltaSeconds)) {
     return;
   }
 
   let appliedDelta = deltaSeconds;
   let minimumDelta = -anchorLine.time;
 
-  for (let index = startIndex - 1; index >= 0; --index) {
-    const previousLine = state.lyrics[index];
+  const previousLine = state.lyrics[startIndex - 1];
 
-    if (!previousLine || !Number.isFinite(previousLine.time)) {
-      continue;
-    }
-
+  if (previousLine) {
     minimumDelta = Math.max(minimumDelta, previousLine.time - anchorLine.time + 0.01);
-    break;
   }
 
   appliedDelta = Math.max(appliedDelta, minimumDelta);
@@ -412,7 +386,7 @@ const shiftLyricsFromIndex = (startIndex: number, deltaSeconds: number) => {
   }
 
   state.lyrics = state.lyrics.map((line, index) => {
-    if (index < startIndex || !Number.isFinite(line.time)) {
+    if (index < startIndex) {
       return line;
     }
 
@@ -573,13 +547,7 @@ const updateLyrics = (force = false) => {
   let activeIndex = -1;
   const currentTime = el.audio.currentTime || 0;
 
-  for (let index = 0; index < state.lyrics.length; ++index) {
-    const line = state.lyrics[index];
-
-    if (!line) {
-      continue;
-    }
-
+  for (const [index, line] of state.lyrics.entries()) {
     if (getEffectiveLyricTime(line.time) <= currentTime) {
       activeIndex = index;
     } else {
