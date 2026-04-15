@@ -14,7 +14,8 @@ export const supportsInlineExport = () =>
   typeof AbortSignal.timeout === "function" &&
   !!MediaRecorder.isTypeSupported?.(EXPORT_RECORDING_MIME_TYPE);
 
-const OBSERVE_START_TIMEOUT_MS = 1200;
+const MEDIA_RECORDER_START_TIMEOUT_MS = 5000;
+const AUDIO_PLAYBACK_START_TIMEOUT_MS = 3000;
 
 interface ObserveStartOptions {
   target: EventTarget;
@@ -23,6 +24,7 @@ interface ObserveStartOptions {
   hasStarted: () => boolean;
   getError: () => Error;
   cancelledErrorMessage: string;
+  timeoutMs: number;
 }
 
 const observeStart = ({
@@ -32,12 +34,13 @@ const observeStart = ({
   hasStarted,
   getError,
   cancelledErrorMessage,
+  timeoutMs,
 }: ObserveStartOptions) => {
   const ac = new AbortController();
   const { signal } = ac;
   const { promise, resolve, reject } = Promise.withResolvers<number>();
   void promise.catch(() => {});
-  const fallbackSignal = AbortSignal.timeout(OBSERVE_START_TIMEOUT_MS);
+  const fallbackSignal = AbortSignal.timeout(timeoutMs);
   let settled = false;
 
   const finalize = (cb: () => void) => {
@@ -80,6 +83,7 @@ export const observeMediaRecorderStart = (mr: MediaRecorder) =>
     hasStarted: () => mr.state === "recording",
     getError: () => new Error("MEDIA_RECORDER_START_FAILED"),
     cancelledErrorMessage: "MEDIA_RECORDER_START_CANCELLED",
+    timeoutMs: MEDIA_RECORDER_START_TIMEOUT_MS,
   });
 
 export const observeAudioPlaybackStart = (audio: HTMLAudioElement) =>
@@ -90,6 +94,7 @@ export const observeAudioPlaybackStart = (audio: HTMLAudioElement) =>
     hasStarted: () => !audio.paused,
     getError: () => new Error(audio.error?.message || "AUDIO_PLAYBACK_START_FAILED"),
     cancelledErrorMessage: "AUDIO_PLAYBACK_START_CANCELLED",
+    timeoutMs: AUDIO_PLAYBACK_START_TIMEOUT_MS,
   });
 
 export const loadFfmpegCore = async (onMuxProgress: (percent: number) => void) => {
