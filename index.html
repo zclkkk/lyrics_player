@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title></title>
+  <script type="module" crossorigin src="/lyrics_player/assets/index-B_FDBPVs.js"></script>
+  <link rel="stylesheet" crossorigin href="/lyrics_player/assets/index-C2E9N12o.css">
+</head>
+
+<body>
+  <div class="desktop-only-notice" role="status" aria-live="polite">
+    <div class="desktop-only-card">
+      <div class="desktop-only-kicker" id="desktopOnlyKicker"></div>
+      <h1 id="desktopOnlyTitle"></h1>
+      <p id="desktopOnlyDescription"></p>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <div class="bg"></div>
+    <div class="ambient"></div>
+    <div class="grain"></div>
+
+    <div class="floating-tools">
+      <button class="mini-btn" id="togglePanelBtn" type="button"></button>
+      <button class="mini-btn" id="toggleRecordingBtn" type="button"></button>
+      <div class="badge" id="shortcutsBadge"></div>
+    </div>
+
+    <dialog class="controls-panel" id="panel" open>
+      <div class="panel-head">
+        <div class="panel-title" id="panelTitle"></div>
+        <div class="panel-actions">
+          <button class="mini-btn" id="loadDemoBtn" type="button"></button>
+          <button class="mini-btn" id="resetViewBtn" type="button"></button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="row2">
+          <div class="field">
+            <label for="titleInput" id="songTitleLabel"></label>
+            <input type="text" id="titleInput" />
+          </div>
+          <div class="field">
+            <label for="artistInput" id="artistLabel"></label>
+            <input type="text" id="artistInput" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="coverInput" id="coverLabel"></label>
+            <label class="file-label" for="coverInput" id="coverPickerLabel"></label>
+            <input id="coverInput" type="file" accept="image/*" hidden />
+          </div>
+          <div class="field">
+            <label for="audioInput" id="audioLabel"></label>
+            <label class="file-label" for="audioInput" id="audioPickerLabel"></label>
+            <input id="audioInput" type="file" accept="audio/*" hidden />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="lrcInput" id="lrcLabel"></label>
+          <textarea id="lrcInput"></textarea>
+        </div>
+
+        <div class="field calibration-card">
+          <div class="field-header">
+            <label for="lrcOffsetInput" id="lrcCalibrationLabel"></label>
+            <div class="value-pill" id="lrcOffsetValue">0 ms</div>
+          </div>
+          <div class="hint" id="lrcCalibrationHint"></div>
+          <div class="field calibration-slider">
+            <label for="lrcOffsetInput" id="lrcOffsetLabel"></label>
+            <input type="range" id="lrcOffsetInput" min="-5000" max="5000" step="10" value="0" />
+          </div>
+          <div class="calibration-actions">
+            <button class="mini-btn" id="nudgeLrcBackBtn" type="button"></button>
+            <button class="mini-btn" id="nudgeLrcForwardBtn" type="button"></button>
+            <button class="mini-btn" id="alignCurrentLyricBtn" type="button"></button>
+            <button class="mini-btn" id="resetLrcCalibrationBtn" type="button"></button>
+          </div>
+          <div class="hint calibration-status" id="lrcCalibrationStatus"></div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="fontScaleInput" id="fontScaleLabel"></label>
+            <input type="range" id="fontScaleInput" min="80" max="140" value="100" />
+          </div>
+          <div class="field">
+            <label for="coverScaleInput" id="coverScaleLabel"></label>
+            <input type="range" id="coverScaleInput" min="26" max="42" value="35" />
+          </div>
+        </div>
+
+        <div class="row2">
+          <div class="field">
+            <label for="bgDarknessInput" id="bgDarknessLabel"></label>
+            <input type="range" id="bgDarknessInput" min="30" max="100" value="72" />
+          </div>
+          <div class="field">
+            <label for="bgBlurInput" id="bgBlurLabel"></label>
+            <input type="range" id="bgBlurInput" min="20" max="150" value="80" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="checkbox-label">
+            <input type="checkbox" id="bgAnimateInput" />
+            <span id="bgAnimateLabel"></span>
+          </label>
+        </div>
+
+        <button class="btn primary" id="playBtn" type="button" style="width: 100%;"></button>
+
+        <button class="btn primary export-btn" id="exportVideoBtn" type="button"></button>
+
+        <div class="hint export-status" id="exportStatus" aria-live="polite"></div>
+
+        <div class="hint" id="workflowHint"></div>
+      </div>
+    </dialog>
+
+    <main class="shell">
+      <section class="left">
+        <div class="cover-wrap">
+          <div class="cover-glow"></div>
+          <img class="cover" id="cover" alt="歌曲封面" />
+        </div>
+
+        <div class="meta">
+          <div class="eyebrow" id="eyebrow"></div>
+          <h1 class="title" id="title"></h1>
+          <div class="artist" id="artist"></div>
+        </div>
+      </section>
+
+      <section class="right">
+        <div class="lyrics-focus-line"></div>
+        <div class="lyrics-viewport" id="lyricsViewport">
+          <div class="lyrics-track" id="lyricsTrack"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="bottom">
+      <div class="time" id="currentTime">00:00</div>
+      <input class="progress" id="progress" type="range" min="0" max="1000" step="1" value="0" aria-label="歌曲进度" />
+      <div class="time" id="duration">00:00</div>
+    </div>
+
+    <audio id="audio"></audio>
+  </div>
+
+</body>
+
+</html>
