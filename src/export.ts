@@ -3,7 +3,8 @@ import { toBlobURL } from "@ffmpeg/util";
 
 import { getFileExtension } from "./utils";
 
-const FFMPEG_CORE_VERSION = "0.12.15";
+// @ffmpeg/core is versioned independently from @ffmpeg/ffmpeg.
+const FFMPEG_CORE_VERSION = "0.12.10";
 const FFMPEG_CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${FFMPEG_CORE_VERSION}/dist/esm`;
 export const EXPORT_RECORDING_MIME_TYPE = "video/webm;codecs=vp9";
 
